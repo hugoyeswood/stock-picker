@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a237e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<title>今日候选清单</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Microsoft YaHei", system-ui, sans-serif; background:#f0f2f5;
+         max-width:640px; margin:0 auto; padding:14px; }
+  h1 { font-size:20px; color:#1a237e; margin-bottom:4px; }
+  .sub { font-size:12px; color:#777; margin-bottom:12px; }
+  .tip { background:#fff8e1; border-left:4px solid #f9a825; border-radius:6px;
+         padding:10px 12px; font-size:13px; color:#5d4a00; margin-bottom:14px; }
+  .stat { display:flex; gap:8px; margin-bottom:14px; }
+  .stat div { flex:1; background:#fff; border-radius:8px; padding:10px; text-align:center;
+              box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .stat b { display:block; font-size:20px; color:#1a237e; }
+  .stat span { font-size:11px; color:#888; }
+  .card { background:#fff; border-radius:12px; padding:14px; margin-bottom:12px;
+          box-shadow:0 1px 4px rgba(0,0,0,.07); }
+  .card-top { display:flex; justify-content:space-between; align-items:flex-start; }
+  .name { font-size:17px; font-weight:bold; }
+  .code { font-size:11px; color:#999; }
+  .score { background:#c62828; color:#fff; border-radius:14px; padding:3px 10px;
+           font-weight:bold; font-size:14px; }
+  .state { margin-left:6px; border-radius:14px; padding:3px 10px; font-weight:bold; font-size:13px; }
+  .price-line { margin:10px 0 6px; display:flex; align-items:baseline; gap:10px; }
+  .price { font-size:26px; font-weight:bold; }
+  .chg { font-size:16px; font-weight:bold; }
+  .tags { display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+  .tag { font-size:12px; background:#f5f5f5; border-radius:10px; padding:3px 8px; }
+  .meta { font-size:12px; color:#666; margin-bottom:8px; }
+  .trade { border-radius:8px; padding:8px 10px; margin-bottom:8px; }
+  .t-advice { font-size:13px; font-weight:bold; margin-bottom:4px; }
+  .t-row { font-size:13px; margin-bottom:4px; }
+  .t-range { font-size:13px; margin-bottom:4px; }
+  .t-risk { font-size:13px; color:#c62828; background:#ffebee; border-radius:6px;
+            padding:5px 8px; margin:6px 0; }
+  .t-confirm { font-size:12px; color:#555; background:rgba(255,255,255,.6); border-radius:6px;
+               padding:5px 8px; }
+  .why { font-size:13px; color:#333; line-height:1.5; margin-bottom:8px; }
+  .hands { font-size:13px; color:#1a237e; background:#e8eaf6; border-radius:8px; padding:7px 10px; }
+  .wallet { background:#fbfdff; border:1px solid #dbe4f7; }
+  .w-total b { font-size:18px; color:#1a237e; }
+  .w-row { display:flex; gap:8px; font-size:13px; padding:3px 0; color:#444; }
+  .w-date { color:#888; width:120px; }
+  .w-amt { font-weight:bold; color:#2e7d32; }
+  .w-note { color:#666; flex:1; }
+  .w-hint { font-size:12px; color:#888; margin-top:6px; }
+  .foot { font-size:11px; color:#999; text-align:center; margin-top:16px; line-height:1.6; }
+</style></head><body>
+<h1>今日候选清单</h1>
+<div class="sub">更新于 2026-10-31 12:17 · 数据源：腾讯 · 当前可用资金 ¥1000.00</div>
+<div class="tip"><b>怎么用：</b>看卡片【状态】——"可买"按【建议买入区间】挂限价单买1手；"等回踩"别追高；"观望"先别碰。<br>
+买入后设好<b>止损</b>(跌到就走)和<b>止盈</b>(涨到落袋)。<b>提醒：</b>数据筛选，非投资建议；涨跌有风险，控制仓位。</div>
+<div class="stat">
+  <div><b>20</b><span>今日候选</span></div>
+  <div><b>1622</b><span>买得起的候选</span></div>
+  <div><b>16</b><span>"可买"数量</span></div>
+</div>
+
+<div class="card wallet">
+  <div class="card-top"><div class="name">资金账户</div>
+    <div class="w-total">当前可用 <b>¥1000.00</b></div></div>
+  <div class="w-rows"><div class="w-row"><span class="w-date">2026-10-31</span><span class="w-amt">+¥1000.00</span><span class="w-note">初始转入</span></div></div>
+  <div class="w-hint">要转入资金？本地运行 <b>python add_fund.py</b>，然后重新部署即可。</div>
+</div>
+
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">有友食品</div><div class="code">sh603697</div></div>
+        <div><span class="score">7分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥9.77</span>
+        <span class="chg" style="color:#d32f2f">+3.61%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +4.27%</span>
+        <span class="tag" style="color:#d32f2f">10日 +3.72%</span>
+        <span class="tag" style="color:#d32f2f">20日 +7.72%</span>
+      </div>
+      <div class="meta">量比 2.3 · 换手 1.57% · 市盈率 21.14</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥9.77</b> · 止损 <b>¥9.28</b> · 止盈 <b>¥10.75</b></div>
+        <div class="t-range">建议买入区间 <b>¥9.50 ~ ¥9.77</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在9.5~9.77元区间 ③同时设好止损单9.28元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约977元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">家家悦</div><div class="code">sh603708</div></div>
+        <div><span class="score">7分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥9.32</span>
+        <span class="chg" style="color:#d32f2f">+1.86%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +5.91%</span>
+        <span class="tag" style="color:#d32f2f">10日 +3.21%</span>
+        <span class="tag" style="color:#d32f2f">20日 +7.25%</span>
+      </div>
+      <div class="meta">量比 1.51 · 换手 1.38% · 市盈率 27.08</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥9.32</b> · 止损 <b>¥8.85</b> · 止盈 <b>¥10.25</b></div>
+        <div class="t-range">建议买入区间 <b>¥9.12 ~ ¥9.32</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在9.12~9.32元区间 ③同时设好止损单8.85元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约932元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">中顺洁柔</div><div class="code">sz002511</div></div>
+        <div><span class="score">7分</span>
+             <span class="state" style="background:#fff3e0;color:#e65100">等回踩</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥7.54</span>
+        <span class="chg" style="color:#d32f2f">+2.86%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +10.23%</span>
+        <span class="tag" style="color:#d32f2f">10日 +11.87%</span>
+        <span class="tag" style="color:#d32f2f">20日 +9.12%</span>
+      </div>
+      <div class="meta">量比 1.39 · 换手 2.16% · 市盈率 21.17</div>
+      <div class="trade" style="background:#fff3e0">
+        <div class="t-advice">短线涨得急，等回踩到MA5(约7.16元)附近再买更稳</div>
+        <div class="t-row">买入参考 <b>¥7.54</b> · 止损 <b>¥7.16</b> · 止盈 <b>¥8.29</b></div>
+        <div class="t-range">建议买入区间 <b>¥7.16 ~ ¥7.54</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在7.16~7.54元区间 ③同时设好止损单7.16元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约754元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">千禾味业</div><div class="code">sh603027</div></div>
+        <div><span class="score">7分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥7.54</span>
+        <span class="chg" style="color:#d32f2f">+3.43%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +2.17%</span>
+        <span class="tag" style="color:#d32f2f">10日 +1.75%</span>
+        <span class="tag" style="color:#d32f2f">20日 +4.87%</span>
+      </div>
+      <div class="meta">量比 2.52 · 换手 2.16% · 市盈率 30.04</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥7.54</b> · 止损 <b>¥7.16</b> · 止盈 <b>¥8.29</b></div>
+        <div class="t-range">建议买入区间 <b>¥7.35 ~ ¥7.54</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在7.35~7.54元区间 ③同时设好止损单7.16元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约754元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">博源化工</div><div class="code">sz000683</div></div>
+        <div><span class="score">7分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥5.66</span>
+        <span class="chg" style="color:#d32f2f">+1.62%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +6.59%</span>
+        <span class="tag" style="color:#d32f2f">10日 +4.43%</span>
+        <span class="tag" style="color:#d32f2f">20日 +2.17%</span>
+      </div>
+      <div class="meta">量比 1.61 · 换手 1.95% · 市盈率 20.75</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥5.66</b> · 止损 <b>¥5.38</b> · 止盈 <b>¥6.23</b></div>
+        <div class="t-range">建议买入区间 <b>¥5.44 ~ ¥5.66</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在5.44~5.66元区间 ③同时设好止损单5.38元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约566元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">华能蒙电</div><div class="code">sh600863</div></div>
+        <div><span class="score">7分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥5.33</span>
+        <span class="chg" style="color:#d32f2f">+1.14%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +6.39%</span>
+        <span class="tag" style="color:#d32f2f">10日 +3.70%</span>
+        <span class="tag" style="color:#d32f2f">20日 +14.87%</span>
+      </div>
+      <div class="meta">量比 1.28 · 换手 1.55% · 市盈率 22.32</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥5.33</b> · 止损 <b>¥5.06</b> · 止盈 <b>¥5.86</b></div>
+        <div class="t-range">建议买入区间 <b>¥5.14 ~ ¥5.33</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在5.14~5.33元区间 ③同时设好止损单5.06元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约533元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">分众传媒</div><div class="code">sz002027</div></div>
+        <div><span class="score">7分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥5.26</span>
+        <span class="chg" style="color:#d32f2f">+1.15%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +1.94%</span>
+        <span class="tag" style="color:#d32f2f">10日 +1.94%</span>
+        <span class="tag" style="color:#d32f2f">20日 +12.88%</span>
+      </div>
+      <div class="meta">量比 1.27 · 换手 1.48% · 市盈率 23.88</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥5.26</b> · 止损 <b>¥5.00</b> · 止盈 <b>¥5.79</b></div>
+        <div class="t-range">建议买入区间 <b>¥5.19 ~ ¥5.26</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在5.19~5.26元区间 ③同时设好止损单5.0元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约526元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">渤海租赁</div><div class="code">sz000415</div></div>
+        <div><span class="score">7分</span>
+             <span class="state" style="background:#fff3e0;color:#e65100">等回踩</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥4.57</span>
+        <span class="chg" style="color:#d32f2f">+6.03%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +10.92%</span>
+        <span class="tag" style="color:#d32f2f">10日 +12.84%</span>
+        <span class="tag" style="color:#d32f2f">20日 +11.19%</span>
+      </div>
+      <div class="meta">量比 3.05 · 换手 2.78% · 市盈率 5.18</div>
+      <div class="trade" style="background:#fff3e0">
+        <div class="t-advice">短线涨得急，等回踩到MA5(约4.24元)附近再买更稳</div>
+        <div class="t-row">买入参考 <b>¥4.57</b> · 止损 <b>¥4.34</b> · 止盈 <b>¥5.03</b></div>
+        <div class="t-range">建议买入区间 <b>¥4.24 ~ ¥4.57</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在4.24~4.57元区间 ③同时设好止损单4.34元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>2手</b>（约914元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">现代投资</div><div class="code">sz000900</div></div>
+        <div><span class="score">7分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥3.62</span>
+        <span class="chg" style="color:#d32f2f">+4.62%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +4.93%</span>
+        <span class="tag" style="color:#d32f2f">10日 +1.40%</span>
+        <span class="tag" style="color:#d32f2f">20日 +1.97%</span>
+      </div>
+      <div class="meta">量比 4.14 · 换手 2.86% · 市盈率 14.99</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥3.62</b> · 止损 <b>¥3.44</b> · 止盈 <b>¥3.98</b></div>
+        <div class="t-range">建议买入区间 <b>¥3.50 ~ ¥3.62</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在3.5~3.62元区间 ③同时设好止损单3.44元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>2手</b>（约724元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">青农商行</div><div class="code">sz002958</div></div>
+        <div><span class="score">7分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥3.03</span>
+        <span class="chg" style="color:#d32f2f">+5.57%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +7.07%</span>
+        <span class="tag" style="color:#d32f2f">10日 +4.48%</span>
+        <span class="tag" style="color:#d32f2f">20日 +4.84%</span>
+      </div>
+      <div class="meta">量比 3.28 · 换手 3.97% · 市盈率 5.24</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥3.03</b> · 止损 <b>¥2.88</b> · 止盈 <b>¥3.33</b></div>
+        <div class="t-range">建议买入区间 <b>¥2.90 ~ ¥3.03</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在2.9~3.03元区间 ③同时设好止损单2.88元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>3手</b>（约909元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">长沙银行</div><div class="code">sh601577</div></div>
+        <div><span class="score">6分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥9.99</span>
+        <span class="chg" style="color:#d32f2f">+2.15%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +6.28%</span>
+        <span class="tag" style="color:#d32f2f">10日 +4.28%</span>
+        <span class="tag" style="color:#d32f2f">20日 +5.71%</span>
+      </div>
+      <div class="meta">量比 1.26 · 换手 0.71% · 市盈率 4.75</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥9.99</b> · 止损 <b>¥9.49</b> · 止盈 <b>¥10.99</b></div>
+        <div class="t-range">建议买入区间 <b>¥9.72 ~ ¥9.99</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在9.72~9.99元区间 ③同时设好止损单9.49元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约999元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">苏州银行</div><div class="code">sz002966</div></div>
+        <div><span class="score">6分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥9.94</span>
+        <span class="chg" style="color:#d32f2f">+2.79%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +7.58%</span>
+        <span class="tag" style="color:#d32f2f">10日 +10.44%</span>
+        <span class="tag" style="color:#d32f2f">20日 +8.04%</span>
+      </div>
+      <div class="meta">量比 1.24 · 换手 1.39% · 市盈率 7.78</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥9.94</b> · 止损 <b>¥9.44</b> · 止盈 <b>¥10.93</b></div>
+        <div class="t-range">建议买入区间 <b>¥9.56 ~ ¥9.94</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在9.56~9.94元区间 ③同时设好止损单9.44元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约994元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">好想你</div><div class="code">sz002582</div></div>
+        <div><span class="score">6分</span>
+             <span class="state" style="background:#fff3e0;color:#e65100">等回踩</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥9.93</span>
+        <span class="chg" style="color:#d32f2f">+9.97%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +8.88%</span>
+        <span class="tag" style="color:#d32f2f">10日 +9.48%</span>
+        <span class="tag" style="color:#d32f2f">20日 +5.08%</span>
+      </div>
+      <div class="meta">量比 6.37 · 换手 17.72% · 市盈率 2.18</div>
+      <div class="trade" style="background:#fff3e0">
+        <div class="t-advice">短线涨得急，等回踩到MA5(约9.25元)附近再买更稳</div>
+        <div class="t-row">买入参考 <b>¥9.93</b> · 止损 <b>¥9.43</b> · 止盈 <b>¥10.92</b></div>
+        <div class="t-range">建议买入区间 <b>¥9.25 ~ ¥9.93</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在9.25~9.93元区间 ③同时设好止损单9.43元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约993元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">李子园</div><div class="code">sh605337</div></div>
+        <div><span class="score">6分</span>
+             <span class="state" style="background:#eeeeee;color:#616161">观望</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥8.96</span>
+        <span class="chg" style="color:#d32f2f">+1.59%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +2.87%</span>
+        <span class="tag" style="color:#2e7d32">10日 -0.67%</span>
+        <span class="tag" style="color:#d32f2f">20日 +0.90%</span>
+      </div>
+      <div class="meta">量比 1.78 · 换手 1.21% · 市盈率 23.41</div>
+      <div class="trade" style="background:#eeeeee">
+        <div class="t-advice">现价在20日线下方，先观察，别急着追</div>
+        <div class="t-row">买入参考 <b>¥8.96</b> · 止损 <b>¥8.51</b> · 止盈 <b>¥9.86</b></div>
+        <div class="t-range">建议买入区间 <b>¥8.89 ~ ¥8.96</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在8.89~8.96元区间 ③同时设好止损单8.51元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约896元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">天润乳业</div><div class="code">sh600419</div></div>
+        <div><span class="score">6分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥8.93</span>
+        <span class="chg" style="color:#d32f2f">+3.12%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#2e7d32">5日 -1.54%</span>
+        <span class="tag" style="color:#d32f2f">10日 +1.94%</span>
+        <span class="tag" style="color:#d32f2f">20日 +2.41%</span>
+      </div>
+      <div class="meta">量比 0.78 · 换手 3.01% · 市盈率 21.29</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥8.93</b> · 止损 <b>¥8.48</b> · 止盈 <b>¥9.82</b></div>
+        <div class="t-range">建议买入区间 <b>¥8.89 ~ ¥8.93</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在8.89~8.93元区间 ③同时设好止损单8.48元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约893元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">仙琚制药</div><div class="code">sz002332</div></div>
+        <div><span class="score">6分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥8.89</span>
+        <span class="chg" style="color:#d32f2f">+0.34%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +1.25%</span>
+        <span class="tag" style="color:#d32f2f">10日 +2.77%</span>
+        <span class="tag" style="color:#d32f2f">20日 +3.25%</span>
+      </div>
+      <div class="meta">量比 0.59 · 换手 1.41% · 市盈率 18.9</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥8.89</b> · 止损 <b>¥8.45</b> · 止盈 <b>¥9.78</b></div>
+        <div class="t-range">建议买入区间 <b>¥8.89 ~ ¥8.89</b>（区间内挂单更稳，别高于现价追）</div>
+        <div class="t-risk">⚠ 止损价8.45已低于近20日低点8.47，注意破位风险</div>
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在8.89~8.89元区间 ③同时设好止损单8.45元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约889元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">交通银行</div><div class="code">sh601328</div></div>
+        <div><span class="score">6分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥8.63</span>
+        <span class="chg" style="color:#d32f2f">+0.82%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +7.20%</span>
+        <span class="tag" style="color:#d32f2f">10日 +6.67%</span>
+        <span class="tag" style="color:#d32f2f">20日 +14.15%</span>
+      </div>
+      <div class="meta">量比 0.88 · 换手 1.0% · 市盈率 7.63</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥8.63</b> · 止损 <b>¥8.20</b> · 止盈 <b>¥9.49</b></div>
+        <div class="t-range">建议买入区间 <b>¥8.41 ~ ¥8.63</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在8.41~8.63元区间 ③同时设好止损单8.2元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日上涨、近10日走强、近20日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约863元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">宁波远洋</div><div class="code">sh601022</div></div>
+        <div><span class="score">6分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥8.28</span>
+        <span class="chg" style="color:#d32f2f">+1.85%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +4.55%</span>
+        <span class="tag" style="color:#d32f2f">10日 +2.99%</span>
+        <span class="tag" style="color:#2e7d32">20日 -1.66%</span>
+      </div>
+      <div class="meta">量比 4.57 · 换手 1.97% · 市盈率 19.97</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥8.28</b> · 止损 <b>¥7.87</b> · 止盈 <b>¥9.11</b></div>
+        <div class="t-range">建议买入区间 <b>¥8.12 ~ ¥8.28</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在8.12~8.28元区间 ③同时设好止损单7.87元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、主力资金流入、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约827元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">白云机场</div><div class="code">sh600004</div></div>
+        <div><span class="score">6分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥8.05</span>
+        <span class="chg" style="color:#d32f2f">+1.39%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +3.74%</span>
+        <span class="tag" style="color:#d32f2f">10日 +3.34%</span>
+        <span class="tag" style="color:#d32f2f">20日 +6.20%</span>
+      </div>
+      <div class="meta">量比 1.49 · 换手 0.75% · 市盈率 19.51</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥8.05</b> · 止损 <b>¥7.65</b> · 止盈 <b>¥8.86</b></div>
+        <div class="t-range">建议买入区间 <b>¥7.94 ~ ¥8.05</b>（区间内挂单更稳，别高于现价追）</div>
+        
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在7.94~8.05元区间 ③同时设好止损单7.65元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、主力资金流入、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约805元，一手=100股）</div>
+    </div>
+    <div class="card">
+      <div class="card-top">
+        <div><div class="name">通化东宝</div><div class="code">sh600867</div></div>
+        <div><span class="score">6分</span>
+             <span class="state" style="background:#e8f5e9;color:#2e7d32">可买</span></div>
+      </div>
+      <div class="price-line">
+        <span class="price">¥7.89</span>
+        <span class="chg" style="color:#d32f2f">+1.41%</span>
+      </div>
+      <div class="tags">
+        <span class="tag" style="color:#d32f2f">5日 +1.41%</span>
+        <span class="tag" style="color:#d32f2f">10日 +2.07%</span>
+        <span class="tag" style="color:#d32f2f">20日 +2.07%</span>
+      </div>
+      <div class="meta">量比 1.64 · 换手 1.52% · 市盈率 28.36</div>
+      <div class="trade" style="background:#e8f5e9">
+        <div class="t-advice">趋势向上，可按参考区间买入1手</div>
+        <div class="t-row">买入参考 <b>¥7.89</b> · 止损 <b>¥7.50</b> · 止盈 <b>¥8.68</b></div>
+        <div class="t-range">建议买入区间 <b>¥7.75 ~ ¥7.89</b>（区间内挂单更稳，别高于现价追）</div>
+        <div class="t-risk">⚠ 止损价7.5已低于近20日低点7.54，注意破位风险</div>
+        <div class="t-confirm">买前确认：①资金够买1手 ②券商挂限价单，填在7.75~7.89元区间 ③同时设好止损单7.5元 ④每次只买1手、不满仓</div>
+      </div>
+      <div class="why">今日放量上涨、近10日走强、近20日走强、换手活跃、估值适中</div>
+      <div class="hands">你的 ¥1000 可买 <b>1手</b>（约789元，一手=100股）</div>
+    </div>
+<div class="foot">状态依据：现价 vs 20日均线、离5日均线远近；买入区间=现价与MA5之间。<br>
+资金账户：本地 python add_fund.py 转入资金后重新部署 · 添加到主屏幕即可像App一样用 · 每天收盘后自动更新</div>
+<script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./service-worker.js'); }
+</script>
+</body></html>
