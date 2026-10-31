@@ -1,0 +1,47 @@
+# ============================================================
+# 【云端自动选股】GitHub Actions 工作流
+# 作用：每天收盘后自动运行 build_site.py，把最新的候选清单
+#      发布成网页，手机任何地方都能打开（GitHub Pages 免费托管）
+# ============================================================
+name: 每日自动选股
+
+on:
+  schedule:
+    - cron: "30 7 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 安装依赖
+        run: pip install --quiet akshare pandas
+      - name: 拉数据并生成页面
+        run: |
+          python build_site.py
+          mkdir -p _site
+          cp index.html data.json manifest.json service-worker.js _site/
+          cp -r icons _site/icons
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+      - name: 上传网页
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: 发布
+        uses: actions/deploy-pages@v4
