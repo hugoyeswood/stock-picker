@@ -571,16 +571,18 @@ function searchStocks() {{
     script.onload = () => {{
       try {{
         // 解析全局变量v_hint
+        // 实际格式：v_hint="sh~600519~贵州茅台~gzmt~GP-A"
+        // 字段顺序：市场(sh/sz)~代码(600519)~名称(贵州茅台)~拼音~类型
         if (typeof v_hint !== 'undefined' && v_hint) {{
           const items = v_hint.split('^');
           const results = [];
           items.forEach(item => {{
             const parts = item.split('~');
-            if (parts.length >= 4 && parts[0] && parts[1]) {{
+            if (parts.length >= 3 && parts[0] && parts[1] && parts[2]) {{
               results.push({{
-                code: parts[0],
-                name: parts[1],
-                market: parts[2]
+                code: parts[0] + parts[1],  // 完整代码：sh600519
+                name: parts[2],            // 名称：贵州茅台
+                market: parts[0]           // 市场：sh
               }});
             }}
           }});
