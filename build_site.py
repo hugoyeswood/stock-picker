@@ -445,11 +445,12 @@ html_doc = f"""<!DOCTYPE html>
   .chart-container {{ margin-top:10px; border:1px solid #eee; border-radius:8px; padding:8px; background:#fafafa; }}
   .chart-title {{ font-size:12px; color:#666; margin-bottom:4px; }}
   .chart-container canvas {{ width:100%; height:200px; }}
-  .search-box {{ margin:10px 0; display:flex; gap:8px; }}
-  .search-box input {{ flex:1; padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:14px; box-sizing:border-box; }}
+  .search-box {{ margin:10px 0; position:relative; }}
+  .search-box input {{ width:100%; padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:14px; box-sizing:border-box; }}
   .search-box input:focus {{ outline:none; border-color:#1a237e; }}
-  .search-box button {{ padding:10px 20px; background:#1a237e; color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer; }}
-  .search-box button:active {{ background:#283593; }}
+  .search-dropdown {{ position:absolute; left:0; right:0; top:100%; margin-top:4px; border:1px solid #ddd; border-radius:8px; background:#fff; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:1000; max-height:300px; overflow-y:auto; display:none; }}
+  .search-dropdown-item {{ padding:10px 14px; border-bottom:1px solid #f0f0f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }}
+  .search-dropdown-item:hover {{ background:#e3f2fd; }}
   .foot {{ font-size:11px; color:#999; text-align:center; margin-top:16px; line-height:1.6; }}
 </style></head><body>
 <h1>今日候选清单</h1>
@@ -519,8 +520,8 @@ html_doc = f"""<!DOCTYPE html>
 </div>
 
 <div class="search-box">
-  <input type="text" id="searchInput" placeholder="输入股票代码或名称..." onkeydown="if(event.key==='Enter')searchStocks()">
-  <button onclick="searchStocks()">🔍 搜索</button>
+  <input type="text" id="searchInput" placeholder="输入股票代码或名称搜索..." oninput="onSearchInput()" onfocus="onSearchInput()">
+  <div id="searchDropdown" class="search-dropdown"></div>
 </div>
 <div class="stat">
   <div><b>{len(out)}</b><span>今日候选</span></div>
@@ -649,9 +650,15 @@ function jsonp(url, callbackName) {{
   }});
 }}
 
-// 搜索股票功能（弹出窗口显示结果）
-function searchStocks() {{
+// 搜索栏下拉建议功能
+function onSearchInput() {{
   const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+  const dropdown = document.getElementById('searchDropdown');
+  
+  if (!keyword) {{
+    dropdown.style.display = 'none';
+    return;
+  }}
   
   // 从当前页面的股票卡片搜索
   const cards = document.querySelectorAll('#stockCards .card');
@@ -666,24 +673,38 @@ function searchStocks() {{
     }}
   }});
   
-  // 弹出搜索结果窗口
-  let html = '<div style="padding:20px;">';
-  html += '<div style="font-size:18px;font-weight:bold;margin-bottom:15px;">🔍 搜索结果（' + results.length + '只）</div>';
   if (results.length === 0) {{
-    html += '<div style="color:#999;text-align:center;padding:30px;">未找到匹配的股票</div>';
-  }} else {{
-    results.forEach(r => {{
-      html += '<div style="padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">';
-      html += '<div><b style="color:#1a237e;">' + r.name + '</b> <span style="color:#666;font-size:12px;">' + r.code + '</span></div>';
-      html += '<div style="text-align:right;"><div>' + r.price + '</div><div style="font-size:12px;">' + r.chg + '</div></div>';
-      html += '</div>';
-    }});
+    dropdown.style.display = 'none';
+    return;
   }}
-  html += '</div>';
   
-  // 用alert弹出（简单直接）
-  alert('搜索到 ' + results.length + ' 只匹配的股票\n\n' + results.map(r => r.name + ' ' + r.code + ' ' + r.price + ' ' + r.chg).join('\n'));
+  // 显示下拉建议
+  let html = '';
+  results.slice(0, 10).forEach(r => {{
+    html += '<div class="search-dropdown-item" onclick="selectSearchResult(\'' + r.code + '\',\'' + r.name + '\')">';
+    html += '<div><b style="color:#1a237e;">' + r.name + '</b> <span style="color:#666;font-size:12px;">' + r.code + '</span></div>';
+    html += '<div style="text-align:right;"><div>' + r.price + '</div><div style="font-size:12px;">' + r.chg + '</div></div>';
+    html += '</div>';
+  }});
+  dropdown.innerHTML = html;
+  dropdown.style.display = 'block';
 }}
+
+// 点击下拉建议中的股票
+function selectSearchResult(code, name) {{
+  document.getElementById('searchInput').value = name + ' ' + code;
+  document.getElementById('searchDropdown').style.display = 'none';
+  // 显示股票详情
+  showStockDetail(code, name);
+}}
+
+// 点击页面其他地方关闭下拉建议
+document.addEventListener('click', function(e) {{
+  const searchBox = document.querySelector('.search-box');
+  if (!searchBox.contains(e.target)) {{
+    document.getElementById('searchDropdown').style.display = 'none';
+  }}
+}});
 
 function showSearchResult(results) {{
   let div = document.getElementById('searchResult');
