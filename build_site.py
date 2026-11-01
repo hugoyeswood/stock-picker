@@ -1,19 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-【你的自动选股小助手】手机版 + 云端版 + 买卖点 + 资金账户  build_site.py
+銆愪綘鐨勮嚜鍔ㄩ€夎偂灏忓姪鎵嬨€戞墜鏈虹増 + 浜戠鐗?+ 涔板崠鐐?+ 璧勯噾璐︽埛  build_site.py
 ====================================================
-每天自动：拉全市场数据 -> 筛选 -> 为候选算买卖点 -> 生成手机页面 index.html + 数据 data.json
+姣忓ぉ鑷姩锛氭媺鍏ㄥ競鍦烘暟鎹?-> 绛涢€?-> 涓哄€欓€夌畻涔板崠鐐?-> 鐢熸垚鎵嬫満椤甸潰 index.html + 鏁版嵁 data.json
 
-功能：
-  1. 资金账户：从 wallet.json 读取"当前可用资金"，按最新资金筛选"买得起的股"；
-     想加钱用 add_fund.py（资金转入端口）。
-  2. 买卖点：每只候选给出 该买/等回踩/观望 + 买入参考价/止损/止盈 +
-     建议买入区间 + 追高风险提示 + 买入前确认清单。
-  3. 安全：所有写入页面的文字都会做转义，防止网页注入问题。
-     本工具不保存任何账号密码，只读公开免费行情。
-
-数据源自动切换：腾讯 -> 东方财富 -> 新浪。
-====================================================
+鍔熻兘锛?  1. 璧勯噾璐︽埛锛氫粠 wallet.json 璇诲彇"褰撳墠鍙敤璧勯噾"锛屾寜鏈€鏂拌祫閲戠瓫閫?涔板緱璧风殑鑲?锛?     鎯冲姞閽辩敤 add_fund.py锛堣祫閲戣浆鍏ョ鍙ｏ級銆?  2. 涔板崠鐐癸細姣忓彧鍊欓€夌粰鍑?璇ヤ拱/绛夊洖韪?瑙傛湜 + 涔板叆鍙傝€冧环/姝㈡崯/姝㈢泩 +
+     寤鸿涔板叆鍖洪棿 + 杩介珮椋庨櫓鎻愮ず + 涔板叆鍓嶇‘璁ゆ竻鍗曘€?  3. 瀹夊叏锛氭墍鏈夊啓鍏ラ〉闈㈢殑鏂囧瓧閮戒細鍋氳浆涔夛紝闃叉缃戦〉娉ㄥ叆闂銆?     鏈伐鍏蜂笉淇濆瓨浠讳綍璐﹀彿瀵嗙爜锛屽彧璇诲叕寮€鍏嶈垂琛屾儏銆?
+鏁版嵁婧愯嚜鍔ㄥ垏鎹細鑵捐 -> 涓滄柟璐㈠瘜 -> 鏂版氮銆?====================================================
 """
 import akshare as ak
 import pandas as pd
@@ -21,15 +14,14 @@ import json
 import html
 from datetime import datetime, timedelta
 
-# ============ 1. 可调的"选股口味" ============
-BUDGET_DEFAULT = 1000.0   # 没有资金账户文件时用的默认资金
-TOP_N    = 20             # 每天最多推几只
+# ============ 1. 鍙皟鐨?閫夎偂鍙ｅ懗" ============
+BUDGET_DEFAULT = 1000.0   # 娌℃湁璧勯噾璐︽埛鏂囦欢鏃剁敤鐨勯粯璁よ祫閲?TOP_N    = 20             # 姣忓ぉ鏈€澶氭帹鍑犲彧
 MIN_PRICE = 0.5
 MAX_PRICE = 10.0
 
-# ============ 2. 读取资金账户 ============
+# ============ 2. 璇诲彇璧勯噾璐︽埛 ============
 def load_wallet():
-    """从 wallet.json 读当前可用资金；文件不存在或出错时用默认值"""
+    """浠?wallet.json 璇诲綋鍓嶅彲鐢ㄨ祫閲戯紱鏂囦欢涓嶅瓨鍦ㄦ垨鍑洪敊鏃剁敤榛樿鍊?""
     try:
         with open("wallet.json", encoding="utf-8") as f:
             w = json.load(f)
@@ -40,17 +32,17 @@ def load_wallet():
 WALLET_AMT, WALLET_LEDGER = load_wallet()
 BUDGET = WALLET_AMT
 
-# ============ 3. 多数据源自动切换 ============
+# ============ 3. 澶氭暟鎹簮鑷姩鍒囨崲 ============
 def normalize(df, source):
-    if source == "腾讯":
+    if source == "鑵捐":
         ren = {"zxj":"price","zdf":"chg","zdf_d5":"chg5","zdf_d10":"chg10",
                "zdf_d20":"chg20","zdf_d60":"chg60","lb":"lb","hsl":"hsl",
                "pe_ttm":"pe","zljlr":"mflow","ltsz":"ltsz","stock_type":"stype"}
-    elif source == "东财":
-        ren = {"最新价":"price","涨跌幅":"chg","量比":"lb","换手率":"hsl",
-               "市盈率-动态":"pe","总市值":"ltsz","股票代码":"code","股票简称":"name"}
+    elif source == "涓滆储":
+        ren = {"鏈€鏂颁环":"price","娑ㄨ穼骞?:"chg","閲忔瘮":"lb","鎹㈡墜鐜?:"hsl",
+               "甯傜泩鐜?鍔ㄦ€?:"pe","鎬诲競鍊?:"ltsz","鑲＄エ浠ｇ爜":"code","鑲＄エ绠€绉?:"name"}
     else:
-        ren = {"最新价":"price","涨跌幅":"chg"}
+        ren = {"鏈€鏂颁环":"price","娑ㄨ穼骞?:"chg"}
     df = df.rename(columns=ren)
     for col in ["chg5","chg10","chg20","chg60","lb","hsl","pe","mflow","ltsz"]:
         if col not in df.columns:
@@ -62,25 +54,25 @@ def normalize(df, source):
     return df
 
 def fetch_all():
-    for source, fn in [("腾讯", ak.stock_zh_a_spot_tx),
-                       ("东财", ak.stock_zh_a_spot_em),
-                       ("新浪", ak.stock_zh_a_spot)]:
+    for source, fn in [("鑵捐", ak.stock_zh_a_spot_tx),
+                       ("涓滆储", ak.stock_zh_a_spot_em),
+                       ("鏂版氮", ak.stock_zh_a_spot)]:
         try:
             df = fn()
-            print(f"[数据源] 用 {source}")
+            print(f"[鏁版嵁婧怾 鐢?{source}")
             return normalize(df, source), source
         except Exception as e:
-            print(f"[数据源] {source} 失败({str(e)[:50]})，换下一个...")
-    raise RuntimeError("所有数据源都失败")
+            print(f"[鏁版嵁婧怾 {source} 澶辫触({str(e)[:50]})锛屾崲涓嬩竴涓?..")
+    raise RuntimeError("鎵€鏈夋暟鎹簮閮藉け璐?)
 
-# ============ 4. 算买卖点（拉历史K线） ============
+# ============ 4. 绠椾拱鍗栫偣锛堟媺鍘嗗彶K绾匡級 ============
 def calc_trade(code, price):
-    """拉近250天历史，算均线/支撑，给出买卖点。失败返回带兜底信息的字典"""
-    fallback = {"state": "未知", "advice": "历史数据暂缺，建议先看该股K线再决定",
+    """鎷夎繎250澶╁巻鍙诧紝绠楀潎绾?鏀拺锛岀粰鍑轰拱鍗栫偣銆傚け璐ヨ繑鍥炲甫鍏滃簳淇℃伅鐨勫瓧鍏?""
+    fallback = {"state": "鏈煡", "advice": "鍘嗗彶鏁版嵁鏆傜己锛屽缓璁厛鐪嬭鑲绾垮啀鍐冲畾",
                 "buy_ref": round(price, 2), "stop_loss": None, "take_profit": None,
                 "ma5": None, "ma20": None, "low20": None,
                 "buy_low": round(price, 2), "buy_high": round(price, 2),
-                "risk_note": "", "confirm": "历史数据暂缺，买入前请人工确认趋势"}
+                "risk_note": "", "confirm": "鍘嗗彶鏁版嵁鏆傜己锛屼拱鍏ュ墠璇蜂汉宸ョ‘璁よ秼鍔?}
     try:
         end = datetime.now()
         start = end - timedelta(days=250)
@@ -99,8 +91,7 @@ def calc_trade(code, price):
         low20 = low.tail(20).min()
         if pd.isna(ma20):
             return fallback
-        # 最近30天K线数据（用于画图）
-        kline_data = []
+        # 鏈€杩?0澶㎏绾挎暟鎹紙鐢ㄤ簬鐢诲浘锛?        kline_data = []
         try:
             dates = hist["date"].tail(30).tolist()
             for i in range(len(dates)):
@@ -113,38 +104,35 @@ def calc_trade(code, price):
                 })
         except Exception:
             kline_data = []
-        # 涨跌停价（A股主板±10%）
-        prev_close = float(close.iloc[-2]) if len(close) >= 2 else price
+        # 娑ㄨ穼鍋滀环锛圓鑲′富鏉柯?0%锛?        prev_close = float(close.iloc[-2]) if len(close) >= 2 else price
         limit_up = round(prev_close * 1.1, 2)
         limit_down = round(prev_close * 0.9, 2)
-        # 状态
-        if price >= ma20:
+        # 鐘舵€?        if price >= ma20:
             dist = (price - ma5) / ma5 * 100 if (pd.notna(ma5) and ma5 > 0) else 0
             if dist <= 5:
-                state = "可买"; advice = "趋势向上，可按参考区间买入1手"
+                state = "鍙拱"; advice = "瓒嬪娍鍚戜笂锛屽彲鎸夊弬鑰冨尯闂翠拱鍏?鎵?
             else:
-                state = "等回踩"; advice = f"短线涨得急，等回踩到MA5(约{ma5:.2f}元)附近再买更稳"
+                state = "绛夊洖韪?; advice = f"鐭嚎娑ㄥ緱鎬ワ紝绛夊洖韪╁埌MA5(绾ma5:.2f}鍏?闄勮繎鍐嶄拱鏇寸ǔ"
         else:
-            state = "观望"; advice = "现价在20日线下方，先观察，别急着追"
-        # 建议买入区间：现价与MA5的较低者 ~ 现价（别高于现价追）
+            state = "瑙傛湜"; advice = "鐜颁环鍦?0鏃ョ嚎涓嬫柟锛屽厛瑙傚療锛屽埆鎬ョ潃杩?
+        # 寤鸿涔板叆鍖洪棿锛氱幇浠蜂笌MA5鐨勮緝浣庤€?~ 鐜颁环锛堝埆楂樹簬鐜颁环杩斤級
         buy_low = round(min(price, ma5), 2) if pd.notna(ma5) else round(price, 2)
         buy_high = round(price, 2)
         stop = round(price * 0.95, 2)
         take = round(price * 1.10, 2)
-        # 风险提示
+        # 椋庨櫓鎻愮ず
         risks = []
         up_from_low = (price - low20) / low20 * 100 if (pd.notna(low20) and low20 > 0) else 0
         if up_from_low > 30:
-            risks.append(f"较近20日低点已涨{up_from_low:.0f}%，追高风险较大")
+            risks.append(f"杈冭繎20鏃ヤ綆鐐瑰凡娑▄up_from_low:.0f}%锛岃拷楂橀闄╄緝澶?)
         above_ma20 = (price / ma20 - 1) * 100 if ma20 > 0 else 0
         if above_ma20 > 12:
-            risks.append(f"现价已高出20日均线约{above_ma20:.0f}%，短线偏热")
+            risks.append(f"鐜颁环宸查珮鍑?0鏃ュ潎绾跨害{above_ma20:.0f}%锛岀煭绾垮亸鐑?)
         if stop and low20 and stop < low20:
-            risks.append(f"止损价{stop}已低于近20日低点{low20:.2f}，注意破位风险")
-        risk_note = "；".join(risks)
-        # 买入前确认清单
-        confirm = (f"买前确认：①资金够买1手 ②券商挂限价单，填在{buy_low}~{buy_high}元区间 "
-                   f"③同时设好止损单{stop}元 ④每次只买1手、不满仓")
+            risks.append(f"姝㈡崯浠穥stop}宸蹭綆浜庤繎20鏃ヤ綆鐐箋low20:.2f}锛屾敞鎰忕牬浣嶉闄?)
+        risk_note = "锛?.join(risks)
+        # 涔板叆鍓嶇‘璁ゆ竻鍗?        confirm = (f"涔板墠纭锛氣憼璧勯噾澶熶拱1鎵?鈶″埜鍟嗘寕闄愪环鍗曪紝濉湪{buy_low}~{buy_high}鍏冨尯闂?"
+                   f"鈶㈠悓鏃惰濂芥鎹熷崟{stop}鍏?鈶ｆ瘡娆″彧涔?鎵嬨€佷笉婊′粨")
         return {
             "state": state, "advice": advice,
             "buy_ref": round(price, 2), "stop_loss": stop, "take_profit": take,
@@ -158,99 +146,92 @@ def calc_trade(code, price):
     except Exception:
         return fallback
 
-print("正在拉取全市场行情（多数据源自动切换）...")
+print("姝ｅ湪鎷夊彇鍏ㄥ競鍦鸿鎯咃紙澶氭暟鎹簮鑷姩鍒囨崲锛?..")
 df, src = fetch_all()
-print(f"已拿到全市场 {len(df)} 只股票（数据源:{src}，可用资金:¥{BUDGET:.2f}）")
+print(f"宸叉嬁鍒板叏甯傚満 {len(df)} 鍙偂绁紙鏁版嵁婧?{src}锛屽彲鐢ㄨ祫閲?楼{BUDGET:.2f}锛?)
 
-# 提取全A股股票列表（用于前端本地搜索）
-all_stocks = []
+# 鎻愬彇鍏ˋ鑲¤偂绁ㄥ垪琛紙鐢ㄤ簬鍓嶇鏈湴鎼滅储锛?all_stocks = []
 for _, row in df.iterrows():
     code = str(row.get("code", ""))
     name = str(row.get("name", ""))
     if code and name:
         all_stocks.append({"code": code, "name": name})
-print(f"已提取 {len(all_stocks)} 只股票用于前端搜索")
+print(f"宸叉彁鍙?{len(all_stocks)} 鍙偂绁ㄧ敤浜庡墠绔悳绱?)
 
-# ============ 5. "能不能买"的过滤（资金约束优先） ============
-def 板块_可买(code):
+# ============ 5. "鑳戒笉鑳戒拱"鐨勮繃婊わ紙璧勯噾绾︽潫浼樺厛锛?============
+def 鏉垮潡_鍙拱(code):
     code = str(code)
     if code.startswith("sh6"): return True
     if code.startswith(("sz000","sz001","sz002","sz003")): return True
     return False
 
 mask = (
-    df["code"].apply(板块_可买)
+    df["code"].apply(鏉垮潡_鍙拱)
     & (~df.get("name", pd.Series(index=df.index)).fillna("").astype(str).str.contains("ST", na=False))
     & (df["price"] >= MIN_PRICE)
     & (df["price"] <= MAX_PRICE)
     & (df["lb"].fillna(0) > 0)
 )
 pool = df[mask].copy()
-print(f"过滤后，当前资金买得起的沪深主板候选 {len(pool)} 只")
+print(f"杩囨护鍚庯紝褰撳墠璧勯噾涔板緱璧风殑娌繁涓绘澘鍊欓€?{len(pool)} 鍙?)
 
-# ============ 6. 打分（缺数据的项自动不参与） ============
-def 打分(r):
+# ============ 6. 鎵撳垎锛堢己鏁版嵁鐨勯」鑷姩涓嶅弬涓庯級 ============
+def 鎵撳垎(r):
     s, why = 0, []
     if pd.notna(r["chg"]) and pd.notna(r["lb"]):
-        if r["chg"] > 1.0 and r["lb"] > 1.2: s += 2; why.append("今日放量上涨")
-        elif r["chg"] > 0: s += 1; why.append("今日上涨")
-    if pd.notna(r["chg10"]) and r["chg10"] > 0: s += 1; why.append("近10日走强")
-    if pd.notna(r["chg20"]) and r["chg20"] > 0: s += 1; why.append("近20日走强")
-    if pd.notna(r["mflow"]) and r["mflow"] > 0: s += 1; why.append("主力资金流入")
-    if pd.notna(r["hsl"]) and 1 <= r["hsl"] <= 10: s += 1; why.append("换手活跃")
-    if pd.notna(r["pe"]) and 0 < r["pe"] < 60: s += 1; why.append("估值适中")
-    return s, "、".join(why)
+        if r["chg"] > 1.0 and r["lb"] > 1.2: s += 2; why.append("浠婃棩鏀鹃噺涓婃定")
+        elif r["chg"] > 0: s += 1; why.append("浠婃棩涓婃定")
+    if pd.notna(r["chg10"]) and r["chg10"] > 0: s += 1; why.append("杩?0鏃ヨ蛋寮?)
+    if pd.notna(r["chg20"]) and r["chg20"] > 0: s += 1; why.append("杩?0鏃ヨ蛋寮?)
+    if pd.notna(r["mflow"]) and r["mflow"] > 0: s += 1; why.append("涓诲姏璧勯噾娴佸叆")
+    if pd.notna(r["hsl"]) and 1 <= r["hsl"] <= 10: s += 1; why.append("鎹㈡墜娲昏穬")
+    if pd.notna(r["pe"]) and 0 < r["pe"] < 60: s += 1; why.append("浼板€奸€備腑")
+    return s, "銆?.join(why)
 
 rows = pool.to_dict("records")
 scored = []
 for r in rows:
-    s, why = 打分(r)
+    s, why = 鎵撳垎(r)
     if s >= 3:
         scored.append((s, r, why))
 scored.sort(reverse=True, key=lambda x: x[0])
 top = scored[:TOP_N]
-print(f"达到信号门槛(≥3分)的有 {len(scored)} 只，取前 {TOP_N} 只")
+print(f"杈惧埌淇″彿闂ㄦ(鈮?鍒?鐨勬湁 {len(scored)} 鍙紝鍙栧墠 {TOP_N} 鍙?)
 
-# ============ 6.5 涨停预测（专门筛选当日涨停潜力股） ============
-def 涨停预测分(r):
-    """计算涨停潜力分数"""
+# ============ 6.5 娑ㄥ仠棰勬祴锛堜笓闂ㄧ瓫閫夊綋鏃ユ定鍋滄綔鍔涜偂锛?============
+def 娑ㄥ仠棰勬祴鍒?r):
+    """璁＄畻娑ㄥ仠娼滃姏鍒嗘暟"""
     s, reasons = 0, []
-    # 当天涨幅3%-9%（还没涨停，但已经有涨幅）
-    if pd.notna(r["chg"]):
+    # 褰撳ぉ娑ㄥ箙3%-9%锛堣繕娌℃定鍋滐紝浣嗗凡缁忔湁娑ㄥ箙锛?    if pd.notna(r["chg"]):
         if 3 <= r["chg"] <= 9:
-            s += 3; reasons.append(f"今日已涨{r['chg']:.1f}%，有冲涨停动力")
+            s += 3; reasons.append(f"浠婃棩宸叉定{r['chg']:.1f}%锛屾湁鍐叉定鍋滃姩鍔?)
         elif 1 <= r["chg"] < 3:
-            s += 1; reasons.append(f"今日小涨{r['chg']:.1f}%，蓄势中")
-    # 量比放大（>1.5说明资金涌入）
-    if pd.notna(r["lb"]) and r["lb"] > 1.5:
-        s += 2; reasons.append(f"量比{r['lb']:.1f}，资金明显涌入")
-    # 换手率活跃（2%-10%）
-    if pd.notna(r["hsl"]) and 2 <= r["hsl"] <= 10:
-        s += 1; reasons.append(f"换手{r['hsl']:.1f}%，交投活跃")
-    # 主力资金流入
+            s += 1; reasons.append(f"浠婃棩灏忔定{r['chg']:.1f}%锛岃搫鍔夸腑")
+    # 閲忔瘮鏀惧ぇ锛?1.5璇存槑璧勯噾娑屽叆锛?    if pd.notna(r["lb"]) and r["lb"] > 1.5:
+        s += 2; reasons.append(f"閲忔瘮{r['lb']:.1f}锛岃祫閲戞槑鏄炬秾鍏?)
+    # 鎹㈡墜鐜囨椿璺冿紙2%-10%锛?    if pd.notna(r["hsl"]) and 2 <= r["hsl"] <= 10:
+        s += 1; reasons.append(f"鎹㈡墜{r['hsl']:.1f}%锛屼氦鎶曟椿璺?)
+    # 涓诲姏璧勯噾娴佸叆
     if pd.notna(r["mflow"]) and r["mflow"] > 0:
-        s += 1; reasons.append("主力资金净流入")
-    # 近期走势强势
+        s += 1; reasons.append("涓诲姏璧勯噾鍑€娴佸叆")
+    # 杩戞湡璧板娍寮哄娍
     if pd.notna(r["chg5"]) and r["chg5"] > 0:
-        s += 1; reasons.append(f"近5日涨{r['chg5']:.1f}%，趋势向上")
+        s += 1; reasons.append(f"杩?鏃ユ定{r['chg5']:.1f}%锛岃秼鍔垮悜涓?)
     if pd.notna(r["chg10"]) and r["chg10"] > 0:
-        s += 1; reasons.append(f"近10日涨{r['chg10']:.1f}%，中期走强")
-    # 价格在合理区间（5-30元，更容易拉涨停）
-    if pd.notna(r["price"]) and 5 <= r["price"] <= 30:
-        s += 1; reasons.append(f"股价{r['price']:.1f}元，盘子适中易拉升")
+        s += 1; reasons.append(f"杩?0鏃ユ定{r['chg10']:.1f}%锛屼腑鏈熻蛋寮?)
+    # 浠锋牸鍦ㄥ悎鐞嗗尯闂达紙5-30鍏冿紝鏇村鏄撴媺娑ㄥ仠锛?    if pd.notna(r["price"]) and 5 <= r["price"] <= 30:
+        s += 1; reasons.append(f"鑲′环{r['price']:.1f}鍏冿紝鐩樺瓙閫備腑鏄撴媺鍗?)
     return s, reasons
 
 limit_up_candidates = []
 for r in rows:
-    s, reasons = 涨停预测分(r)
-    if s >= 5:  # 涨停潜力分≥5分
-        limit_up_candidates.append((s, r, reasons))
+    s, reasons = 娑ㄥ仠棰勬祴鍒?r)
+    if s >= 5:  # 娑ㄥ仠娼滃姏鍒嗏墺5鍒?        limit_up_candidates.append((s, r, reasons))
 limit_up_candidates.sort(reverse=True, key=lambda x: x[0])
-limit_up_top = limit_up_candidates[:5]  # 取前5只
-print(f"涨停预测：找到 {len(limit_up_candidates)} 只潜力股，取前 {len(limit_up_top)} 只")
+limit_up_top = limit_up_candidates[:5]  # 鍙栧墠5鍙?print(f"娑ㄥ仠棰勬祴锛氭壘鍒?{len(limit_up_candidates)} 鍙綔鍔涜偂锛屽彇鍓?{len(limit_up_top)} 鍙?)
 
-# ============ 7. 组装结果（含买卖点） ============
-print("正在逐只拉历史K线算买卖点（约半分钟）...")
+# ============ 7. 缁勮缁撴灉锛堝惈涔板崠鐐癸級 ============
+print("姝ｅ湪閫愬彧鎷夊巻鍙睰绾跨畻涔板崠鐐癸紙绾﹀崐鍒嗛挓锛?..")
 out = []
 for s, r, why in top:
     price = r["price"]
@@ -271,7 +252,7 @@ for s, r, why in top:
         "trade": trade,
     })
 
-# ============ 7.5 组装涨停预测结果 ============
+# ============ 7.5 缁勮娑ㄥ仠棰勬祴缁撴灉 ============
 limit_up_out = []
 for s, r, reasons in limit_up_top:
     price = r["price"]
@@ -286,74 +267,74 @@ for s, r, reasons in limit_up_top:
 
 now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-# 保存数据备份 data.json
+# 淇濆瓨鏁版嵁澶囦唤 data.json
 with open("data.json", "w", encoding="utf-8") as f:
     json.dump({"updated": now, "source": src, "budget": BUDGET,
                "count": len(out), "candidates": out,
                "limit_up_picks": limit_up_out}, f, ensure_ascii=False, indent=2)
 
-# ============ 8. 生成手机友好页面 index.html ============
+# ============ 8. 鐢熸垚鎵嬫満鍙嬪ソ椤甸潰 index.html ============
 def esc(x):
-    """把所有写入页面的文字转义，防止注入/乱码"""
+    """鎶婃墍鏈夊啓鍏ラ〉闈㈢殑鏂囧瓧杞箟锛岄槻姝㈡敞鍏?涔辩爜"""
     return html.escape(str(x), quote=True)
 
 def fmt_pct(v):
     return "--" if v is None else f"{v:+.2f}%"
 def color(v):
     if v is None or v == 0: return "#666"
-    return "#d32f2f" if v > 0 else "#2e7d32"   # A股习惯：红涨绿跌
+    return "#d32f2f" if v > 0 else "#2e7d32"   # A鑲′範鎯細绾㈡定缁胯穼
 
-STATE_STYLE = {"可买": ("#e8f5e9", "#2e7d32"), "等回踩": ("#fff3e0", "#e65100"),
-               "观望": ("#eeeeee", "#616161"), "未知": ("#eeeeee", "#616161")}
+STATE_STYLE = {"鍙拱": ("#e8f5e9", "#2e7d32"), "绛夊洖韪?: ("#fff3e0", "#e65100"),
+               "瑙傛湜": ("#eeeeee", "#616161"), "鏈煡": ("#eeeeee", "#616161")}
 
 cards = ""
 for r in out:
     t = r["trade"]
-    bg, fg = STATE_STYLE.get(t["state"], STATE_STYLE["未知"])
+    bg, fg = STATE_STYLE.get(t["state"], STATE_STYLE["鏈煡"])
     c_chg = color(r["chg"])
-    chg5 = f"5日 {fmt_pct(r['chg5'])}" if r["chg5"] is not None else "5日 --"
-    chg10 = f"10日 {fmt_pct(r['chg10'])}" if r["chg10"] is not None else "10日 --"
-    chg20 = f"20日 {fmt_pct(r['chg20'])}" if r["chg20"] is not None else "20日 --"
-    stop = f"¥{t['stop_loss']:.2f}" if t.get("stop_loss") else "--"
-    take = f"¥{t['take_profit']:.2f}" if t.get("take_profit") else "--"
-    risk_html = f'<div class="t-risk">⚠ {esc(t["risk_note"])}</div>' if t.get("risk_note") else ""
+    chg5 = f"5鏃?{fmt_pct(r['chg5'])}" if r["chg5"] is not None else "5鏃?--"
+    chg10 = f"10鏃?{fmt_pct(r['chg10'])}" if r["chg10"] is not None else "10鏃?--"
+    chg20 = f"20鏃?{fmt_pct(r['chg20'])}" if r["chg20"] is not None else "20鏃?--"
+    stop = f"楼{t['stop_loss']:.2f}" if t.get("stop_loss") else "--"
+    take = f"楼{t['take_profit']:.2f}" if t.get("take_profit") else "--"
+    risk_html = f'<div class="t-risk">鈿?{esc(t["risk_note"])}</div>' if t.get("risk_note") else ""
     cards += f"""
     <div class="card">
       <div class="card-top">
         <div><div class="name">{esc(r['name'])}</div><div class="code">{esc(r['code'])}</div></div>
-        <div><span class="score">{r['score']}分</span>
+        <div><span class="score">{r['score']}鍒?/span>
              <span class="state" style="background:{bg};color:{fg}">{esc(t['state'])}</span></div>
       </div>
       <div class="price-line">
-        <span class="price" data-code="{esc(r['code'])}">¥{r['price']:.2f}</span>
+        <span class="price" data-code="{esc(r['code'])}">楼{r['price']:.2f}</span>
         <span class="chg" data-code="{esc(r['code'])}" style="color:{c_chg}">{fmt_pct(r['chg'])}</span>
       </div>
       <div class="limit-row">
-        <span class="limit-up">涨停 ¥{t.get('limit_up', '--')}</span>
-        <span class="limit-down">跌停 ¥{t.get('limit_down', '--')}</span>
+        <span class="limit-up">娑ㄥ仠 楼{t.get('limit_up', '--')}</span>
+        <span class="limit-down">璺屽仠 楼{t.get('limit_down', '--')}</span>
       </div>
       <div class="tags">
         <span class="tag" style="color:{color(r['chg5'])}">{chg5}</span>
         <span class="tag" style="color:{color(r['chg10'])}">{chg10}</span>
         <span class="tag" style="color:{color(r['chg20'])}">{chg20}</span>
       </div>
-      <div class="meta">量比 {r['lb'] if r['lb'] is not None else '--'} · 换手 {r['hsl'] if r['hsl'] is not None else '--'}% · 市盈率 {r['pe'] if r['pe'] is not None else '--'}</div>
+      <div class="meta">閲忔瘮 {r['lb'] if r['lb'] is not None else '--'} 路 鎹㈡墜 {r['hsl'] if r['hsl'] is not None else '--'}% 路 甯傜泩鐜?{r['pe'] if r['pe'] is not None else '--'}</div>
       <div class="trade" style="background:{bg}">
         <div class="t-advice">{esc(t['advice'])}</div>
-        <div class="t-row">买入参考 <b>¥{r['price']:.2f}</b> · 止损 <b>{stop}</b> · 止盈 <b>{take}</b></div>
-        <div class="t-range">建议买入区间 <b>¥{t['buy_low']:.2f} ~ ¥{t['buy_high']:.2f}</b>（区间内挂单更稳，别高于现价追）</div>
+        <div class="t-row">涔板叆鍙傝€?<b>楼{r['price']:.2f}</b> 路 姝㈡崯 <b>{stop}</b> 路 姝㈢泩 <b>{take}</b></div>
+        <div class="t-range">寤鸿涔板叆鍖洪棿 <b>楼{t['buy_low']:.2f} ~ 楼{t['buy_high']:.2f}</b>锛堝尯闂村唴鎸傚崟鏇寸ǔ锛屽埆楂樹簬鐜颁环杩斤級</div>
         {risk_html}
         <div class="t-confirm">{esc(t['confirm'])}</div>
       </div>
       <div class="why">{esc(r['why'])}</div>
-      <div class="hands">你的 ¥{BUDGET:.0f} 可买 <b>{r['hands']}手</b>（约{r['cost']}元，一手=100股）</div>
+      <div class="hands">浣犵殑 楼{BUDGET:.0f} 鍙拱 <b>{r['hands']}鎵?/b>锛堢害{r['cost']}鍏冿紝涓€鎵?100鑲★級</div>
       <div>
-        <button class="trade-btn btn-buy" onclick="recordTrade('buy','{esc(r['code'])}','{esc(r['name'])}',{r['price']})">记录买入</button>
-        <button class="trade-btn btn-sell" onclick="recordTrade('sell','{esc(r['code'])}','{esc(r['name'])}',{r['price']})">记录卖出</button>
-        <button class="trade-btn btn-chart" onclick="toggleChart('chart_{esc(r['code'])}')">K线图</button>
+        <button class="trade-btn btn-buy" onclick="recordTrade('buy','{esc(r['code'])}','{esc(r['name'])}',{r['price']})">璁板綍涔板叆</button>
+        <button class="trade-btn btn-sell" onclick="recordTrade('sell','{esc(r['code'])}','{esc(r['name'])}',{r['price']})">璁板綍鍗栧嚭</button>
+        <button class="trade-btn btn-chart" onclick="toggleChart('chart_{esc(r['code'])}')">K绾垮浘</button>
       </div>
       <div id="chart_{esc(r['code'])}" class="chart-container" style="display:none;">
-        <div class="chart-title">近30日K线</div>
+        <div class="chart-title">杩?0鏃绾?/div>
         <canvas id="canvas_{esc(r['code'])}" width="600" height="200"></canvas>
         <script type="application/json" id="data_{esc(r['code'])}">{json.dumps(t.get('kline', []), ensure_ascii=False)}</script>
       </div>
@@ -361,18 +342,18 @@ for r in out:
 
 wallet_rows = ""
 for item in WALLET_LEDGER[-5:][::-1]:
-    note = esc(item.get("note", "")) or "—"
+    note = esc(item.get("note", "")) or "鈥?
     wallet_rows += f'<div class="w-row"><span class="w-date">{esc(item.get("date",""))}</span>'
-    wallet_rows += f'<span class="w-amt">+¥{item["amount"]:.2f}</span><span class="w-note">{note}</span></div>'
+    wallet_rows += f'<span class="w-amt">+楼{item["amount"]:.2f}</span><span class="w-note">{note}</span></div>'
 wallet_html = f"""
 <div class="card wallet">
-  <div class="card-top"><div class="name">资金账户</div>
-    <div class="w-total">当前可用 <b>¥{BUDGET:.2f}</b> <button onclick="editBudget()" style="margin-left:8px;font-size:12px;padding:3px 10px;background:#1a237e;color:#fff;border:none;border-radius:4px;cursor:pointer;">编辑</button></div></div>
+  <div class="card-top"><div class="name">璧勯噾璐︽埛</div>
+    <div class="w-total">褰撳墠鍙敤 <b>楼{BUDGET:.2f}</b> <button onclick="editBudget()" style="margin-left:8px;font-size:12px;padding:3px 10px;background:#1a237e;color:#fff;border:none;border-radius:4px;cursor:pointer;">缂栬緫</button></div></div>
   <div class="w-rows">{wallet_rows}</div>
-  <div class="w-hint">点"编辑"可直接修改可用资金，数据保存在本地。</div>
+  <div class="w-hint">鐐?缂栬緫"鍙洿鎺ヤ慨鏀瑰彲鐢ㄨ祫閲戯紝鏁版嵁淇濆瓨鍦ㄦ湰鍦般€?/div>
   <div class="trades">
-    <h3>📋 我的交易记录</h3>
-    <div id="tradeList"><div style="font-size:12px;color:#999;">还没有交易记录，点下面的按钮开始记录</div></div>
+    <h3>馃搵 鎴戠殑浜ゆ槗璁板綍</h3>
+    <div id="tradeList"><div style="font-size:12px;color:#999;">杩樻病鏈変氦鏄撹褰曪紝鐐逛笅闈㈢殑鎸夐挳寮€濮嬭褰?/div></div>
   </div>
 </div>"""
 
@@ -384,7 +365,7 @@ html_doc = f"""<!DOCTYPE html>
 <link rel="icon" href="icons/icon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
-<title>今日候选清单</title>
+<title>浠婃棩鍊欓€夋竻鍗?/title>
 <style>
   * {{ box-sizing:border-box; margin:0; padding:0; }}
   body {{ font-family:"Microsoft YaHei", system-ui, sans-serif; background:#f0f2f5;
@@ -453,104 +434,102 @@ html_doc = f"""<!DOCTYPE html>
   .search-dropdown-item:hover {{ background:#e3f2fd; }}
   .foot {{ font-size:11px; color:#999; text-align:center; margin-top:16px; line-height:1.6; }}
 </style></head><body>
-<h1>今日候选清单</h1>
-<div class="sub">数据更新于 {now} · 当前时间：<span id="currentTime"></span> · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f}</div>
+<h1>浠婃棩鍊欓€夋竻鍗?/h1>
+<div class="sub">鏁版嵁鏇存柊浜?{now} 路 褰撳墠鏃堕棿锛?span id="currentTime"></span> 路 鏁版嵁婧愶細{esc(src)} 路 褰撳墠鍙敤璧勯噾 楼{BUDGET:.2f}</div>
 
-<!-- 大盘指数 -->
+<!-- 澶х洏鎸囨暟 -->
 <div style="margin:10px 0;padding:10px;background:#f5f5f5;border-radius:8px;display:flex;justify-content:space-around;text-align:center;">
   <div>
-    <div style="font-size:12px;color:#666;">上证指数</div>
+    <div style="font-size:12px;color:#666;">涓婅瘉鎸囨暟</div>
     <div id="shIndex" style="font-size:16px;font-weight:bold;">--</div>
   </div>
   <div>
-    <div style="font-size:12px;color:#666;">深证成指</div>
+    <div style="font-size:12px;color:#666;">娣辫瘉鎴愭寚</div>
     <div id="szIndex" style="font-size:16px;font-weight:bold;">--</div>
   </div>
   <div>
-    <div style="font-size:12px;color:#666;">创业板指</div>
+    <div style="font-size:12px;color:#666;">鍒涗笟鏉挎寚</div>
     <div id="cyIndex" style="font-size:16px;font-weight:bold;">--</div>
   </div>
 </div>
 
-<!-- 醒目的风险预判提示 -->
+<!-- 閱掔洰鐨勯闄╅鍒ゆ彁绀?-->
 <div style="margin:14px 0;padding:14px;background:linear-gradient(135deg,#ff5252,#d32f2f);border-radius:12px;color:#fff;box-shadow:0 4px 12px rgba(211,47,47,0.3);">
-  <div style="font-size:16px;font-weight:bold;margin-bottom:8px;">⚠️ 风险预判提示</div>
+  <div style="font-size:16px;font-weight:bold;margin-bottom:8px;">鈿狅笍 椋庨櫓棰勫垽鎻愮ず</div>
   <div style="font-size:13px;line-height:1.8;opacity:0.95;">
-    <b>建议：</b>
-    ① 单只股票仓位不超过总资金30%，别把鸡蛋放一个篮子<br>
-    ② 严格止损，亏损超过10%果断离场<br>
-    ③ 涨得太多的股票别追高，等回踩再考虑<br>
-    ④ 新手先用1000元练手，熟悉了再加仓<br>
-    ⑤ 本APP仅作数据参考，不构成投资建议
-  </div>
+    <b>寤鸿锛?/b>
+    鈶?鍗曞彧鑲＄エ浠撲綅涓嶈秴杩囨€昏祫閲?0%锛屽埆鎶婇浮铔嬫斁涓€涓瀛?br>
+    鈶?涓ユ牸姝㈡崯锛屼簭鎹熻秴杩?0%鏋滄柇绂诲満<br>
+    鈶?娑ㄥ緱澶鐨勮偂绁ㄥ埆杩介珮锛岀瓑鍥炶俯鍐嶈€冭檻<br>
+    鈶?鏂版墜鍏堢敤1000鍏冪粌鎵嬶紝鐔熸倝浜嗗啀鍔犱粨<br>
+    鈶?鏈珹PP浠呬綔鏁版嵁鍙傝€冿紝涓嶆瀯鎴愭姇璧勫缓璁?  </div>
 </div>
 
-<!-- 新手引导（3步） -->
+<!-- 鏂版墜寮曞锛?姝ワ級 -->
 <div class="tip" style="background:#e3f2fd;border-left:4px solid #1976d2;">
-  <b>📱 新手3步上手：</b><br>
-  ① 看下面推荐的股票，"✅可买"的可以考虑买入<br>
-  ② 点"记录买入"，输入实际成交价格<br>
-  ③ 系统自动帮你盯止盈止损，到点提醒你<br>
-  <span style="color:#d32f2f;font-size:12px;">⚠️ 新手提醒：先小钱练手，别重仓！</span>
+  <b>馃摫 鏂版墜3姝ヤ笂鎵嬶細</b><br>
+  鈶?鐪嬩笅闈㈡帹鑽愮殑鑲＄エ锛?鉁呭彲涔?鐨勫彲浠ヨ€冭檻涔板叆<br>
+  鈶?鐐?璁板綍涔板叆"锛岃緭鍏ュ疄闄呮垚浜や环鏍?br>
+  鈶?绯荤粺鑷姩甯綘鐩鐩堟鎹燂紝鍒扮偣鎻愰啋浣?br>
+  <span style="color:#d32f2f;font-size:12px;">鈿狅笍 鏂版墜鎻愰啋锛氬厛灏忛挶缁冩墜锛屽埆閲嶄粨锛?/span>
 </div>
 
-<!-- 今日涨停预计 -->
+<!-- 浠婃棩娑ㄥ仠棰勮 -->
 <div style="margin:14px 0;padding:14px;background:linear-gradient(135deg,#ff6b6b,#ee5a24);border-radius:12px;color:#fff;">
-  <div style="font-size:16px;font-weight:bold;margin-bottom:10px;">🔥 今日涨停预计（短线潜力股）</div>
-  <div style="font-size:12px;opacity:0.9;margin-bottom:10px;">以下是根据资金面、技术面筛选的今日涨停潜力股，仅供参考，不构成投资建议</div>
+  <div style="font-size:16px;font-weight:bold;margin-bottom:10px;">馃敟 浠婃棩娑ㄥ仠棰勮锛堢煭绾挎綔鍔涜偂锛?/div>
+  <div style="font-size:12px;opacity:0.9;margin-bottom:10px;">浠ヤ笅鏄牴鎹祫閲戦潰銆佹妧鏈潰绛涢€夌殑浠婃棩娑ㄥ仠娼滃姏鑲★紝浠呬緵鍙傝€冿紝涓嶆瀯鎴愭姇璧勫缓璁?/div>
   {''.join(f'''
   <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:10px;margin-bottom:8px;">
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div><b>{esc(r['name'])}</b> <span style="font-size:11px;opacity:0.8;">{esc(r['code'])}</span></div>
       <div style="text-align:right;">
-        <div style="font-size:18px;font-weight:bold;">¥{r['price']:.2f}</div>
+        <div style="font-size:18px;font-weight:bold;">楼{r['price']:.2f}</div>
         <div style="font-size:12px;">{fmt_pct(r['chg'])}</div>
       </div>
     </div>
     <div style="font-size:11px;margin-top:6px;opacity:0.95;">
-      <b>推荐理由：</b><br>
-      {''.join('· ' + esc(reason) + '<br>' for reason in r['reasons'])}
+      <b>鎺ㄨ崘鐞嗙敱锛?/b><br>
+      {''.join('路 ' + esc(reason) + '<br>' for reason in r['reasons'])}
     </div>
     <div style="margin-top:6px;font-size:11px;opacity:0.8;">
-      量比 {r['lb'] if r['lb'] else '--'} · 换手 {r['hsl'] if r['hsl'] else '--'}% · 涨停潜力分 {r['score']}分
-    </div>
+      閲忔瘮 {r['lb'] if r['lb'] else '--'} 路 鎹㈡墜 {r['hsl'] if r['hsl'] else '--'}% 路 娑ㄥ仠娼滃姏鍒?{r['score']}鍒?    </div>
   </div>
   ''' for r in limit_up_out)}
-  <div style="font-size:11px;opacity:0.8;text-align:center;margin-top:6px;">⚠️ 涨停预测仅供参考，实际走势受多种因素影响，注意风险</div>
+  <div style="font-size:11px;opacity:0.8;text-align:center;margin-top:6px;">鈿狅笍 娑ㄥ仠棰勬祴浠呬緵鍙傝€冿紝瀹為檯璧板娍鍙楀绉嶅洜绱犲奖鍝嶏紝娉ㄦ剰椋庨櫓</div>
 </div>
 
 <div class="search-box" style="display:flex;gap:8px;">
-  <input type="text" id="searchInput" placeholder="输入股票代码或名称..." style="flex:1;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
-  <button onclick="doSearch()" style="padding:10px 20px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">搜索</button>
+  <input type="text" id="searchInput" placeholder="杈撳叆鑲＄エ浠ｇ爜鎴栧悕绉?.." style="flex:1;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+  <button onclick="doSearch()" style="padding:10px 20px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">鎼滅储</button>
 </div>
 <div class="stat">
-  <div><b>{len(out)}</b><span>今日候选</span></div>
-  <div><b>{len(pool)}</b><span>买得起的候选</span></div>
-  <div><b>{sum(1 for x in out if x['trade']['state']=='可买')}</b><span>"可买"数量</span></div>
+  <div><b>{len(out)}</b><span>浠婃棩鍊欓€?/span></div>
+  <div><b>{len(pool)}</b><span>涔板緱璧风殑鍊欓€?/span></div>
+  <div><b>{sum(1 for x in out if x['trade']['state']=='鍙拱')}</b><span>"鍙拱"鏁伴噺</span></div>
 </div>
 {wallet_html}
 <div id="stockCards">
 {cards}
 </div>
 
-<!-- 新手常见问题 -->
+<!-- 鏂版墜甯歌闂 -->
 <div style="margin:20px 0;padding:14px;background:#fff3e0;border-radius:8px;">
-  <div style="font-weight:bold;margin-bottom:8px;">❓ 新手常见问题</div>
+  <div style="font-weight:bold;margin-bottom:8px;">鉂?鏂版墜甯歌闂</div>
   <div style="font-size:13px;line-height:1.8;">
-    <b>Q：怎么添加到手机桌面？</b><br>
-    A：手机浏览器打开本页 → 菜单 → "添加到主屏幕"，就像App一样用。<br><br>
-    <b>Q：交易记录存在哪？</b><br>
-    A：存在你手机本地（浏览器缓存），不会上传到服务器。<br><br>
-    <b>Q：怎么清空记录重新开始？</b><br>
-    A：点下面的"清空所有记录"按钮。<br><br>
-    <button onclick="clearAllData()" style="margin-top:8px;padding:8px 16px;background:#f44336;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🗑️ 清空所有记录</button>
+    <b>Q锛氭€庝箞娣诲姞鍒版墜鏈烘闈紵</b><br>
+    A锛氭墜鏈烘祻瑙堝櫒鎵撳紑鏈〉 鈫?鑿滃崟 鈫?"娣诲姞鍒颁富灞忓箷"锛屽氨鍍廇pp涓€鏍风敤銆?br><br>
+    <b>Q锛氫氦鏄撹褰曞瓨鍦ㄥ摢锛?/b><br>
+    A锛氬瓨鍦ㄤ綘鎵嬫満鏈湴锛堟祻瑙堝櫒缂撳瓨锛夛紝涓嶄細涓婁紶鍒版湇鍔″櫒銆?br><br>
+    <b>Q锛氭€庝箞娓呯┖璁板綍閲嶆柊寮€濮嬶紵</b><br>
+    A锛氱偣涓嬮潰鐨?娓呯┖鎵€鏈夎褰?鎸夐挳銆?br><br>
+    <button onclick="clearAllData()" style="margin-top:8px;padding:8px 16px;background:#f44336;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">馃棏锔?娓呯┖鎵€鏈夎褰?/button>
   </div>
 </div>
 
-<div class="foot">状态依据：现价 vs 20日均线、离5日均线远近；买入区间=现价与MA5之间。<br>
-⚠️ 本工具仅为数据筛选参考，不构成投资建议。股市有风险，入市需谨慎。</div>
+<div class="foot">鐘舵€佷緷鎹細鐜颁环 vs 20鏃ュ潎绾裤€佺5鏃ュ潎绾胯繙杩戯紱涔板叆鍖洪棿=鐜颁环涓嶮A5涔嬮棿銆?br>
+鈿狅笍 鏈伐鍏蜂粎涓烘暟鎹瓫閫夊弬鑰冿紝涓嶆瀯鎴愭姇璧勫缓璁€傝偂甯傛湁椋庨櫓锛屽叆甯傞渶璋ㄦ厧銆?/div>
 <script>
-// 实时更新当前时间
+// 瀹炴椂鏇存柊褰撳墠鏃堕棿
 function updateCurrentTime() {{
   try {{
     var now = new Date();
@@ -560,7 +539,7 @@ function updateCurrentTime() {{
     var hours = String(now.getHours()).padStart(2, '0');
     var minutes = String(now.getMinutes()).padStart(2, '0');
     var seconds = String(now.getSeconds()).padStart(2, '0');
-    var weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    var weekdays = ['鏄熸湡鏃?, '鏄熸湡涓€', '鏄熸湡浜?, '鏄熸湡涓?, '鏄熸湡鍥?, '鏄熸湡浜?, '鏄熸湡鍏?];
     var weekday = weekdays[now.getDay()];
     var timeStr = year + '-' + month + '-' + day + ' ' + weekday + ' ' + hours + ':' + minutes + ':' + seconds;
     var el = document.getElementById('currentTime');
@@ -570,7 +549,7 @@ function updateCurrentTime() {{
 updateCurrentTime();
 setInterval(updateCurrentTime, 1000);
 
-// 搜索功能
+// 鎼滅储鍔熻兘
 function doSearch() {{
   try {{
     var keyword = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -586,437 +565,31 @@ function doSearch() {{
         card.style.display = 'none';
       }}
     }});
-    if (keyword) alert('搜索到 ' + matchCount + ' 只匹配的股票');
+    if (keyword) alert('鎼滅储鍒?' + matchCount + ' 鍙尮閰嶇殑鑲＄エ');
   }} catch(e) {{
-    alert('搜索出错: ' + e.message);
+    alert('鎼滅储鍑洪敊: ' + e.message);
   }}
 }}
 
-// 编辑资金功能
+// 缂栬緫璧勯噾鍔熻兘
 function editBudget() {{
   try {{
-    var v = prompt('请输入可用资金（元）：', 1000);
+    var v = prompt('璇疯緭鍏ュ彲鐢ㄨ祫閲戯紙鍏冿級锛?, 1000);
     if (!v || isNaN(v) || v <= 0) return;
     localStorage.setItem('myBudget', v);
-    alert('资金已更新：¥' + parseFloat(v).toFixed(2));
+    alert('璧勯噾宸叉洿鏂帮細楼' + parseFloat(v).toFixed(2));
     location.reload();
   }} catch(e) {{
-    alert('编辑出错: ' + e.message);
+    alert('缂栬緫鍑洪敊: ' + e.message);
   }}
 }}
 
-// 清空所有数据
-function clearAllData() {{
-  if (!confirm('确定要清空所有交易记录和资金设置吗？此操作不可恢复！')) return;
+// 娓呯┖鎵€鏈夋暟鎹?function clearAllData() {{
+  if (!confirm('纭畾瑕佹竻绌烘墍鏈変氦鏄撹褰曞拰璧勯噾璁剧疆鍚楋紵姝ゆ搷浣滀笉鍙仮澶嶏紒')) return;
   localStorage.removeItem('myTrades');
   localStorage.removeItem('myBudget');
-  alert('已清空所有记录！');
+  alert('宸叉竻绌烘墍鏈夎褰曪紒');
   location.reload();
-}}
-
-// 清空搜索
-function clearSearch() {{
-  document.getElementById('searchInput').value = '';
-  const cards = document.querySelectorAll('#stockCards .card');
-  cards.forEach(card => card.style.display = '');
-}}
-
-function showSearchResult(results) {{
-  let div = document.getElementById('searchResult');
-  const searchBox = document.querySelector('.search-box');
-  if (!div) {{
-    div = document.createElement('div');
-    div.id = 'searchResult';
-    // 下拉框样式：紧贴搜索框下方，绝对定位
-    div.style.cssText = 'position:absolute;left:0;right:0;top:100%;margin-top:4px;border:1px solid #ddd;border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:1000;max-height:300px;overflow-y:auto;';
-    // 让搜索框相对定位
-    searchBox.style.position = 'relative';
-    searchBox.appendChild(div);
-  }}
-  if (!results.length) {{
-    div.style.display = 'none';
-    return;
-  }}
-  div.style.display = 'block';
-  let html = '';
-  results.forEach((r, idx) => {{
-    html += '<div onclick="showStockDetail(\\'' + r.code + '\\',\\'' + r.name + '\\')" style="padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background=\\'#e3f2fd\\'" onmouseout="this.style.background=\\'\\'">';
-    html += '<span><b style="color:#1a237e;">' + r.name + '</b></span>';
-    html += '<span style="color:#666;font-size:12px;background:#f5f5f5;padding:2px 8px;border-radius:4px;">' + r.code + '</span>';
-    html += '</div>';
-  }});
-  div.innerHTML = html;
-}}
-
-// 点击页面其他地方时关闭搜索结果
-document.addEventListener('click', function(e) {{
-  const searchBox = document.querySelector('.search-box');
-  const searchResult = document.getElementById('searchResult');
-  if (searchResult && !searchBox.contains(e.target)) {{
-    searchResult.style.display = 'none';
-  }}
-}});
-
-// 显示股票详细行情
-async function showStockDetail(code, name) {{
-  try {{
-    const resp = await fetch('https://qt.gtimg.cn/q=' + code);
-    const text = await resp.text();
-    const parts = text.split('~');
-    if (parts.length < 35) return;
-    const price = parseFloat(parts[3]);
-    const chg = parseFloat(parts[32]);
-    const open = parseFloat(parts[5]);
-    const high = parseFloat(parts[33]);
-    const low = parseFloat(parts[34]);
-    const prevClose = parseFloat(parts[4]);
-    const limitUp = (prevClose * 1.1).toFixed(2);
-    const limitDown = (prevClose * 0.9).toFixed(2);
-    
-    // 弹出详情
-    const chgColor = chg >= 0 ? '#c62828' : '#2e7d32';
-    const html = 
-      '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;display:flex;align-items:center;justify-content:center;">' +
-      '<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
-      '<div><h2 style="margin:0;font-size:18px;">' + name + '</h2>' +
-      '<div style="color:#666;font-size:12px;">' + code + '</div></div>' +
-      '<button onclick="closeStockDetail()" style="background:#eee;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;">×</button>' +
-      '</div>' +
-      '<div style="text-align:center;margin:20px 0;">' +
-      '<div style="font-size:36px;font-weight:bold;color:' + chgColor + ';">¥' + price.toFixed(2) + '</div>' +
-      '<div style="color:' + chgColor + ';font-size:16px;">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</div>' +
-      '</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">' +
-      '<div>今开：¥' + open.toFixed(2) + '</div>' +
-      '<div>昨收：¥' + prevClose.toFixed(2) + '</div>' +
-      '<div>最高：¥' + high.toFixed(2) + '</div>' +
-      '<div>最低：¥' + low.toFixed(2) + '</div>' +
-      '<div style="color:#c62828;">涨停：¥' + limitUp + '</div>' +
-      '<div style="color:#2e7d32;">跌停：¥' + limitDown + '</div>' +
-      '</div>' +
-      '<div style="margin-top:20px;display:flex;gap:10px;">' +
-      '<button onclick="recordTrade(\\'buy\\',\\'' + code + '\\',\\'' + name + '\\',' + price + ')" style="flex:1;padding:12px;background:#c62828;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录买入</button>' +
-      '<button onclick="recordTrade(\\'sell\\',\\'' + code + '\\',\\'' + name + '\\',' + price + ')" style="flex:1;padding:12px;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录卖出</button>' +
-      '</div>' +
-      '</div></div>';
-    
-    let div = document.getElementById('stockDetailModal');
-    if (!div) {{
-      div = document.createElement('div');
-      div.id = 'stockDetailModal';
-      document.body.appendChild(div);
-    }}
-    div.innerHTML = html;
-    div.style.display = 'block';
-  }} catch(e) {{
-    alert('获取行情失败，请重试');
-  }}
-}}
-
-function closeStockDetail() {{
-  const div = document.getElementById('stockDetailModal');
-  if (div) div.style.display = 'none';
-}}
-
-// 交易记录功能（存在手机本地）
-function getTrades() {{
-  try {{ return JSON.parse(localStorage.getItem('myTrades') || '[]'); }}
-  catch(e) {{ return []; }}
-}}
-function saveTrades(t) {{
-  localStorage.setItem('myTrades', JSON.stringify(t));
-  renderTrades();
-}}
-// 计算交易费用
-function calcFee(amount, type) {{
-  const commission = Math.max(amount * 0.00025, 5); // 佣金万2.5，最低5元
-  const transfer = amount * 0.00002; // 过户费万0.2
-  let stamp = 0;
-  if (type === 'sell') stamp = amount * 0.001; // 印花税千1，卖出收
-  return commission + transfer + stamp;
-}}
-
-function recordTrade(type, code, name, price) {{
-  const priceInput = prompt('请输入实际成交价格（元）：', price);
-  if (!priceInput || isNaN(priceInput) || priceInput <= 0) return;
-  const qtyInput = prompt('请输入数量（股），1手=100股：', '100');
-  if (!qtyInput || isNaN(qtyInput) || qtyInput <= 0) return;
-  const actualPrice = parseFloat(priceInput);
-  const qty = parseInt(qtyInput);
-  const amount = actualPrice * qty;
-  const fee = calcFee(amount, type);
-  const trades = getTrades();
-  trades.push({{
-    type: type, code: code, name: name,
-    price: actualPrice, qty: qty,
-    amount: amount, fee: fee,
-    time: new Date().toLocaleString('zh-CN')
-  }});
-  saveTrades(trades);
-  alert((type === 'buy' ? '买入' : '卖出') + '记录成功：\n' +
-    name + ' ' + qty + '股 @ ¥' + actualPrice.toFixed(2) + '\n' +
-    '成交金额：¥' + amount.toFixed(2) + '\n' +
-    '交易费用：¥' + fee.toFixed(2) + '\n' +
-    '实际支出：¥' + (amount + fee).toFixed(2));
-}}
-function renderTrades() {{
-  const trades = getTrades();
-  const list = document.getElementById('tradeList');
-  if (!trades.length) {{
-    list.innerHTML = '<div style="font-size:12px;color:#999;">还没有交易记录，点下面的按钮开始记录</div>';
-    return;
-  }}
-  // 计算持仓和盈亏
-  const positions = {{}};
-  trades.forEach(t => {{
-    if (!positions[t.code]) positions[t.code] = {{ name: t.name, buyQty: 0, buyCost: 0, sellQty: 0, sellRevenue: 0 }};
-    if (t.type === 'buy') {{ positions[t.code].buyQty += t.qty; positions[t.code].buyCost += t.price * t.qty; }}
-    else {{ positions[t.code].sellQty += t.qty; positions[t.code].sellRevenue += t.price * t.qty; }}
-  }});
-  let html = '';
-  let totalPnl = 0;
-  Object.values(positions).forEach(p => {{
-    const holdQty = p.buyQty - p.sellQty;
-    const avgCost = p.buyQty > 0 ? (p.buyCost / p.buyQty) : 0;
-    const realizedPnl = p.sellRevenue - (p.sellQty * avgCost);
-    totalPnl += realizedPnl;
-    const pnlClass = realizedPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
-    const pnlSign = realizedPnl >= 0 ? '+' : '';
-    html += '<div class="trade-item">';
-    html += '<b>' + p.name + '</b>：持仓 ' + holdQty + '股，成本 ¥' + avgCost.toFixed(2);
-    if (holdQty > 0) {{
-      const takeProfit = avgCost * 1.15;
-      const stopLoss = avgCost * 0.85;
-      html += '<div style="margin-top:4px;font-size:12px;color:#666;">';
-      html += '止盈(+15%)：<span style="color:#c62828;font-weight:bold;">¥' + takeProfit.toFixed(2) + '</span>';
-      html += ' · 止损(-15%)：<span style="color:#2e7d32;font-weight:bold;">¥' + stopLoss.toFixed(2) + '</span>';
-      html += '</div>';
-    }}
-    if (p.sellQty > 0) html += '，已实现盈亏 <span class="' + pnlClass + '">' + pnlSign + '¥' + realizedPnl.toFixed(2) + '</span>';
-    html += '</div>';
-  }});
-  // 总盈亏
-  const totalClass = totalPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
-  const totalSign = totalPnl >= 0 ? '+' : '';
-  html += '<div style="margin-top:6px;padding:6px;background:#f5f5f5;border-radius:6px;font-size:13px;">';
-  html += '总已实现盈亏：<span class="' + totalClass + '"><b>' + totalSign + '¥' + totalPnl.toFixed(2) + '</b></span>';
-  html += '</div>';
-  // 最近5条明细
-  html += '<div style="margin-top:6px;font-size:11px;color:#888;">最近记录：</div>';
-  trades.slice(-5).reverse().forEach(t => {{
-    html += '<div class="trade-item">' + t.time + ' ' + (t.type === 'buy' ? '买入' : '卖出') + ' ' + t.name + ' ' + t.qty + '股 @ ¥' + t.price.toFixed(2) + '</div>';
-  }});
-  list.innerHTML = html;
-}}
-renderTrades();
-
-// 可用资金（可自由修改）
-function getBudget() {{
-  const saved = localStorage.getItem('myBudget');
-  return saved ? parseFloat(saved) : {BUDGET};
-}}
-function setBudget(v) {{
-  localStorage.setItem('myBudget', v);
-  renderBudget();
-}}
-function renderBudget() {{
-  const b = getBudget();
-  document.querySelectorAll('.w-total b').forEach(el => el.textContent = '¥' + b.toFixed(2));
-}}
-function editBudget() {{
-  const v = prompt('请输入可用资金（元）：', getBudget());
-  if (!v || isNaN(v) || v <= 0) return;
-  setBudget(parseFloat(v));
-  alert('资金已更新：¥' + parseFloat(v).toFixed(2));
-}}
-renderBudget();
-
-// 实时行情刷新（JSONP方式，绕过CORS）
-const stockCodes = [{','.join(f"'{r['code']}'" for r in out)}];
-
-function refreshRealtime() {{
-  // 用JSONP方式加载腾讯行情API
-  const codes = stockCodes.join(',');
-  const script = document.createElement('script');
-  script.src = 'https://qt.gtimg.cn/q=' + codes;
-  script.onload = () => {{
-    try {{
-      // 解析所有股票的实时数据
-      stockCodes.forEach(code => {{
-        const varName = 'v_' + code;
-        if (typeof window[varName] === 'undefined') return;
-        const data = window[varName];
-        if (!data || typeof data !== 'string') return;
-        const parts = data.split('~');
-        if (parts.length < 35) return;
-        
-        const price = parseFloat(parts[3]);
-        const prevClose = parseFloat(parts[4]);
-        const chg = parseFloat(parts[32]);
-        
-        if (!price || isNaN(price)) return;
-        
-        // 更新价格显示
-        const priceEls = document.querySelectorAll('.price');
-        priceEls.forEach(el => {{
-          if (el.dataset.code === code) {{
-            el.textContent = '¥' + price.toFixed(2);
-          }}
-        }});
-        // 更新涨跌幅
-        const chgEls = document.querySelectorAll('.chg');
-        chgEls.forEach(el => {{
-          if (el.dataset.code === code) {{
-            el.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
-            el.style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
-          }}
-        }});
-      }});
-      // 更新盈亏
-      renderFloatingPnl();
-    }} catch(e) {{
-      console.log('实时数据解析失败', e);
-    }}
-    document.body.removeChild(script);
-  }};
-  script.onerror = () => {{
-    console.log('实时数据请求失败');
-    document.body.removeChild(script);
-  }};
-  document.body.appendChild(script);
-}}
-
-// 浮动盈亏计算
-function renderFloatingPnl() {{
-  const trades = getTrades();
-  if (!trades.length) return;
-  const positions = {{}};
-  trades.forEach(t => {{
-    if (!positions[t.code]) positions[t.code] = {{ name: t.name, buyQty: 0, buyCost: 0, sellQty: 0, sellRevenue: 0 }};
-    if (t.type === 'buy') {{ positions[t.code].buyQty += t.qty; positions[t.code].buyCost += t.price * t.qty; }}
-    else {{ positions[t.code].sellQty += t.qty; positions[t.code].sellRevenue += t.price * t.qty; }}
-  }});
-  // 找当前浮动盈亏显示区域
-  const list = document.getElementById('tradeList');
-  if (!list) return;
-  // 在已实现盈亏后面加上浮动盈亏
-  const floatingDiv = document.getElementById('floatingPnl');
-  if (floatingDiv) floatingDiv.remove();
-  let totalFloating = 0;
-  let html = '';
-  Object.values(positions).forEach(p => {{
-    const holdQty = p.buyQty - p.sellQty;
-    if (holdQty <= 0) return;
-    const avgCost = p.buyCost / p.buyQty;
-    // 找当前价格
-    const priceEl = document.querySelector(`.price[data-code="${{p.code}}"]`);
-    const curPrice = priceEl ? parseFloat(priceEl.textContent.replace('¥', '')) : avgCost;
-    const floatingPnl = (curPrice - avgCost) * holdQty;
-    totalFloating += floatingPnl;
-    const cls = floatingPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
-    const sign = floatingPnl >= 0 ? '+' : '';
-    html += '<div class="trade-item">' + p.name + ' 浮动盈亏：<span class="' + cls + '">' + sign + '¥' + floatingPnl.toFixed(2) + '</span>';
-    // 止盈止损提醒
-    const takeProfit = avgCost * 1.15;
-    const stopLoss = avgCost * 0.85;
-    if (curPrice >= takeProfit) {{
-      html += ' <span style="background:#ffeb3b;color:#000;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:bold;">⚠ 已达止盈</span>';
-    }} else if (curPrice <= stopLoss) {{
-      html += ' <span style="background:#ff5722;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:bold;">⚠ 已达止损</span>';
-    }}
-    html += '</div>';
-  }});
-  if (html) {{
-    const div = document.createElement('div');
-    div.id = 'floatingPnl';
-    const totalCls = totalFloating >= 0 ? 'pnl-pos' : 'pnl-neg';
-    const totalSign = totalFloating >= 0 ? '+' : '';
-    div.innerHTML = '<div style="margin-top:6px;padding:6px;background:#e8eaf6;border-radius:6px;font-size:13px;">' +
-      '总浮动盈亏：<span class="' + totalCls + '"><b>' + totalSign + '¥' + totalFloating.toFixed(2) + '</b></span></div>' +
-      html;
-    list.appendChild(div);
-  }}
-}}
-
-// 每5秒刷新一次（秒级实时更新）
-setInterval(refreshRealtime, 3000); // 每3秒刷新实时行情
-// 页面加载后先刷新一次
-setTimeout(refreshRealtime, 1000);
-
-// K线图功能
-function toggleChart(chartId) {{
-  const chart = document.getElementById(chartId);
-  if (chart.style.display === 'none') {{
-    chart.style.display = 'block';
-    const code = chartId.replace('chart_', '');
-    drawKLine(code);
-  }} else {{
-    chart.style.display = 'none';
-  }}
-}}
-
-function drawKLine(code) {{
-  const canvas = document.getElementById('canvas_' + code);
-  const dataEl = document.getElementById('data_' + code);
-  if (!canvas || !dataEl) return;
-  let data;
-  try {{ data = JSON.parse(dataEl.textContent); }} catch(e) {{ return; }}
-  if (!data || data.length === 0) return;
-
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  const h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
-
-  // 找最高最低价
-  let maxPrice = 0, minPrice = 9999;
-  data.forEach(d => {{
-    if (d.high && d.high > maxPrice) maxPrice = d.high;
-    if (d.low && d.low < minPrice) minPrice = d.low;
-  }});
-  const range = maxPrice - minPrice || 1;
-  const padding = 10;
-  const chartH = h - padding * 2;
-  const chartW = w - padding * 2;
-  const barWidth = chartW / data.length * 0.6;
-
-  // 画K线
-  data.forEach((d, i) => {{
-    const x = padding + (chartW / data.length) * i + (chartW / data.length - barWidth) / 2;
-    const yOpen = padding + chartH * (1 - (d.open - minPrice) / range);
-    const yClose = padding + chartH * (1 - (d.close - minPrice) / range);
-    const yHigh = padding + chartH * (1 - (d.high - minPrice) / range);
-    const yLow = padding + chartH * (1 - (d.low - minPrice) / range);
-
-    // 红涨绿跌
-    const color = d.close >= d.open ? '#d32f2f' : '#2e7d32';
-    ctx.fillStyle = color;
-    ctx.strokeStyle = color;
-
-    // 上下影线
-    ctx.beginPath();
-    ctx.moveTo(x + barWidth / 2, yHigh);
-    ctx.lineTo(x + barWidth / 2, yLow);
-    ctx.stroke();
-
-    // 实体
-    const yTop = Math.min(yOpen, yClose);
-    const barH = Math.max(Math.abs(yClose - yOpen), 1);
-    ctx.fillRect(x, yTop, barWidth, barH);
-  }});
-
-  // 画价格标签
-  ctx.fillStyle = '#666';
-  ctx.font = '10px sans-serif';
-  ctx.fillText(maxPrice.toFixed(2), 5, padding + 8);
-  ctx.fillText(minPrice.toFixed(2), 5, h - padding);
 }}
 </script>
 </body></html>"""
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html_doc)
-
-print("\n完成！生成：index.html（手机页）+ data.json（数据备份）")
-print(f"更新于 {now}，数据源 {src}，候选 {len(out)} 只，可用资金 ¥{BUDGET:.2f}")
