@@ -1264,29 +1264,37 @@ function searchStocks() {
       if (s) s.remove();
     }
   };
-  // 腾讯搜索API: https://smartbox.gtimg.cn/s3/?v=2&q=关键词&t=all
+  // 腾讯搜索API不支持callback参数，返回 v_hint="市场~代码~名称~拼音~类型"，多结果用^分隔
+  // 动态script加载成功后触发onload，此时全局变量v_hint已被赋值，必须用onload读取（不能用onerror）
   const script = document.createElement('script');
   script.id = cbName;
-  script.src = 'https://smartbox.gtimg.cn/s3/?v=2&q=' + encodeURIComponent(keyword) + '&t=all&callback=' + cbName;
-  script.onerror = function() {
-    // 腾讯搜索不支持callback参数，直接解析全局变量
+  script.src = 'https://smartbox.gtimg.cn/s3/?v=2&q=' + encodeURIComponent(keyword) + '&t=all';
+  script.onload = function() {
     try {
       const raw = window.v_hint || '';
       const div = document.getElementById('searchResult');
       if (!raw) {
-        div.innerHTML = '<div style="padding:14px;color:#999;font-size:13px;">搜索失败，请重试</div>';
+        div.innerHTML = '<div style="padding:14px;color:#999;font-size:13px;">未找到匹配股票</div>';
         div.style.display = 'block';
-        return;
+      } else {
+        const results = [];
+        raw.split('^').forEach(item => {
+          const parts = item.split('~');
+          if (parts.length >= 3 && parts[4] && parts[4].indexOf('GP') === 0) {
+            results.push({ code: parts[0] + parts[1], name: parts[2] });
+          }
+        });
+        window[cbName](results);
       }
-      const results = [];
-      raw.split('^').forEach(item => {
-        const parts = item.split('~');
-        if (parts.length >= 3 && parts[4] && parts[4].indexOf('GP') === 0) {
-          results.push({ code: parts[0] + parts[1], name: parts[2] });
-        }
-      });
-      window[cbName](results);
     } catch(e) { console.log('搜索解析失败', e); }
+    script.remove();
+  };
+  script.onerror = function() {
+    const div = document.getElementById('searchResult');
+    if (div) {
+      div.innerHTML = '<div style="padding:14px;color:#999;font-size:13px;">搜索失败，请检查网络后重试</div>';
+      div.style.display = 'block';
+    }
     script.remove();
   };
   document.body.appendChild(script);
@@ -1385,12 +1393,17 @@ function showStockDetail(code, name) {
       if (s) s.remove();
     }
   };
+  // 腾讯行情API不支持callback，返回 v_sh600519="字段~字段~..."，script加载成功后触发onload
+  // 必须用onload读取全局变量v_{code}（不能用onerror）
   const script = document.createElement('script');
   script.id = cbName;
-  script.src = 'https://qt.gtimg.cn/q=' + code + '&callback=' + cbName;
+  script.src = 'https://qt.gtimg.cn/q=' + code;
+  script.onload = function() {
+    try { window[cbName](); } catch(e) { console.log('行情加载失败', e); alert('获取行情失败，请重试'); }
+    script.remove();
+  };
   script.onerror = function() {
-    // 腾讯行情不支持callback，直接解析全局变量
-    try { window[cbName](); } catch(e) { alert('获取行情失败'); }
+    try { window[cbName](); } catch(e) { alert('获取行情失败，请检查网络'); }
     script.remove();
   };
   document.body.appendChild(script);
