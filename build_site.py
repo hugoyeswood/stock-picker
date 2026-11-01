@@ -445,9 +445,11 @@ html_doc = f"""<!DOCTYPE html>
   .chart-container {{ margin-top:10px; border:1px solid #eee; border-radius:8px; padding:8px; background:#fafafa; }}
   .chart-title {{ font-size:12px; color:#666; margin-bottom:4px; }}
   .chart-container canvas {{ width:100%; height:200px; }}
-  .search-box {{ margin:10px 0; }}
-  .search-box input {{ width:100%; padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:14px; box-sizing:border-box; }}
+  .search-box {{ margin:10px 0; display:flex; gap:8px; }}
+  .search-box input {{ flex:1; padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:14px; box-sizing:border-box; }}
   .search-box input:focus {{ outline:none; border-color:#1a237e; }}
+  .search-box button {{ padding:10px 20px; background:#1a237e; color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer; }}
+  .search-box button:active {{ background:#283593; }}
   .foot {{ font-size:11px; color:#999; text-align:center; margin-top:16px; line-height:1.6; }}
 </style></head><body>
 <h1>今日候选清单</h1>
@@ -488,7 +490,8 @@ html_doc = f"""<!DOCTYPE html>
 </div>
 
 <div class="search-box">
-  <input type="text" id="searchInput" placeholder="🔍 输入股票代码或名称搜索..." oninput="searchStocks()">
+  <input type="text" id="searchInput" placeholder="输入股票代码或名称..." onkeydown="if(event.key==='Enter')searchStocks()">
+  <button onclick="searchStocks()">🔍 搜索</button>
 </div>
 <div class="stat">
   <div><b>{len(out)}</b><span>今日候选</span></div>
