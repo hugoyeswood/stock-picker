@@ -622,11 +622,15 @@ function searchStocks() {{
 
 function showSearchResult(results) {{
   let div = document.getElementById('searchResult');
+  const searchBox = document.querySelector('.search-box');
   if (!div) {{
     div = document.createElement('div');
     div.id = 'searchResult';
-    div.style.cssText = 'margin:10px 0;border:1px solid #ddd;border-radius:8px;background:#fff;overflow:hidden;';
-    document.querySelector('.search-box').after(div);
+    // 下拉框样式：紧贴搜索框下方，绝对定位
+    div.style.cssText = 'position:absolute;left:0;right:0;top:100%;margin-top:4px;border:1px solid #ddd;border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:1000;max-height:300px;overflow-y:auto;';
+    // 让搜索框相对定位
+    searchBox.style.position = 'relative';
+    searchBox.appendChild(div);
   }}
   if (!results.length) {{
     div.style.display = 'none';
@@ -634,13 +638,23 @@ function showSearchResult(results) {{
   }}
   div.style.display = 'block';
   let html = '';
-  results.forEach(r => {{
-    html += '<div onclick="showStockDetail(\'' + r.code + '\',\'' + r.name + '\')" style="padding:10px 14px;border-bottom:1px solid #eee;cursor:pointer;" onmouseover="this.style.background=\'#f5f5f5\'" onmouseout="this.style.background=\'\'">';
-    html += '<b>' + r.name + '</b> <span style="color:#666;font-size:12px;margin-left:8px;">' + r.code + '</span>';
+  results.forEach((r, idx) => {{
+    html += '<div onclick="showStockDetail(\'' + r.code + '\',\'' + r.name + '\')" style="padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background=\'#e3f2fd\'" onmouseout="this.style.background=\'\'">';
+    html += '<span><b style="color:#1a237e;">' + r.name + '</b></span>';
+    html += '<span style="color:#666;font-size:12px;background:#f5f5f5;padding:2px 8px;border-radius:4px;">' + r.code + '</span>';
     html += '</div>';
   }});
   div.innerHTML = html;
 }}
+
+// 点击页面其他地方时关闭搜索结果
+document.addEventListener('click', function(e) {{
+  const searchBox = document.querySelector('.search-box');
+  const searchResult = document.getElementById('searchResult');
+  if (searchResult && !searchBox.contains(e.target)) {{
+    searchResult.style.display = 'none';
+  }}
+}});
 
 // 显示股票详细行情
 async function showStockDetail(code, name) {{
