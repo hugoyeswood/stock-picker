@@ -93,11 +93,30 @@ def calc_trade(code, price):
         close = pd.to_numeric(hist["close"], errors="coerce")
         low   = pd.to_numeric(hist["low"],  errors="coerce")
         high  = pd.to_numeric(hist["high"], errors="coerce")
+        open_ = pd.to_numeric(hist["open"], errors="coerce")
         ma5  = close.tail(5).mean()
         ma20 = close.tail(20).mean()
         low20 = low.tail(20).min()
         if pd.isna(ma20):
             return fallback
+        # 最近30天K线数据（用于画图）
+        kline_data = []
+        try:
+            dates = hist["date"].tail(30).tolist()
+            for i in range(len(dates)):
+                kline_data.append({
+                    "date": str(dates[i]),
+                    "open": round(float(open_.iloc[-30+i]), 2) if i < len(open_) else None,
+                    "close": round(float(close.iloc[-30+i]), 2) if i < len(close) else None,
+                    "low": round(float(low.iloc[-30+i]), 2) if i < len(low) else None,
+                    "high": round(float(high.iloc[-30+i]), 2) if i < len(high) else None,
+                })
+        except Exception:
+            kline_data = []
+        # 涨跌停价（A股主板±10%）
+        prev_close = float(close.iloc[-2]) if len(close) >= 2 else price
+        limit_up = round(prev_close * 1.1, 2)
+        limit_down = round(prev_close * 0.9, 2)
         # 状态
         if price >= ma20:
             dist = (price - ma5) / ma5 * 100 if (pd.notna(ma5) and ma5 > 0) else 0
@@ -133,6 +152,8 @@ def calc_trade(code, price):
             "ma20": round(ma20, 2), "low20": round(low20, 2),
             "buy_low": buy_low, "buy_high": buy_high,
             "risk_note": risk_note, "confirm": confirm,
+            "kline": kline_data,
+            "limit_up": limit_up, "limit_down": limit_down,
         }
     except Exception:
         return fallback
@@ -246,6 +267,10 @@ for r in out:
         <span class="price">¥{r['price']:.2f}</span>
         <span class="chg" style="color:{c_chg}">{fmt_pct(r['chg'])}</span>
       </div>
+      <div class="limit-row">
+        <span class="limit-up">涨停 ¥{t.get('limit_up', '--')}</span>
+        <span class="limit-down">跌停 ¥{t.get('limit_down', '--')}</span>
+      </div>
       <div class="tags">
         <span class="tag" style="color:{color(r['chg5'])}">{chg5}</span>
         <span class="tag" style="color:{color(r['chg10'])}">{chg10}</span>
@@ -264,6 +289,12 @@ for r in out:
       <div>
         <button class="trade-btn btn-buy" onclick="recordTrade('buy','{esc(r['code'])}','{esc(r['name'])}',{r['price']})">记录买入</button>
         <button class="trade-btn btn-sell" onclick="recordTrade('sell','{esc(r['code'])}','{esc(r['name'])}',{r['price']})">记录卖出</button>
+        <button class="trade-btn btn-chart" onclick="toggleChart('chart_{esc(r['code'])}')">K线图</button>
+      </div>
+      <div id="chart_{esc(r['code'])}" class="chart-container" style="display:none;">
+        <div class="chart-title">近30日K线</div>
+        <canvas id="canvas_{esc(r['code'])}" width="600" height="200"></canvas>
+        <script type="application/json" id="data_{esc(r['code'])}">{json.dumps(t.get('kline', []), ensure_ascii=False)}</script>
       </div>
     </div>"""
 
@@ -346,6 +377,13 @@ html_doc = f"""<!DOCTYPE html>
   .trade-item {{ font-size:12px; padding:5px 0; border-bottom:1px dashed #eee; color:#444; }}
   .pnl-pos {{ color:#c62828; font-weight:bold; }}
   .pnl-neg {{ color:#2e7d32; font-weight:bold; }}
+  .limit-row {{ display:flex; gap:12px; font-size:12px; margin:4px 0 8px; }}
+  .limit-up {{ color:#c62828; background:#ffebee; padding:2px 8px; border-radius:4px; }}
+  .limit-down {{ color:#2e7d32; background:#e8f5e9; padding:2px 8px; border-radius:4px; }}
+  .btn-chart {{ background:#1a237e; color:#fff; }}
+  .chart-container {{ margin-top:10px; border:1px solid #eee; border-radius:8px; padding:8px; background:#fafafa; }}
+  .chart-title {{ font-size:12px; color:#666; margin-bottom:4px; }}
+  .chart-container canvas {{ width:100%; height:200px; }}
   .foot {{ font-size:11px; color:#999; text-align:center; margin-top:16px; line-height:1.6; }}
 </style></head><body>
 <h1>今日候选清单</h1>
@@ -431,6 +469,75 @@ function renderTrades() {{
   list.innerHTML = html;
 }}
 renderTrades();
+
+// K线图功能
+function toggleChart(chartId) {{
+  const chart = document.getElementById(chartId);
+  if (chart.style.display === 'none') {{
+    chart.style.display = 'block';
+    const code = chartId.replace('chart_', '');
+    drawKLine(code);
+  }} else {{
+    chart.style.display = 'none';
+  }}
+}}
+
+function drawKLine(code) {{
+  const canvas = document.getElementById('canvas_' + code);
+  const dataEl = document.getElementById('data_' + code);
+  if (!canvas || !dataEl) return;
+  let data;
+  try {{ data = JSON.parse(dataEl.textContent); }} catch(e) {{ return; }}
+  if (!data || data.length === 0) return;
+
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // 找最高最低价
+  let maxPrice = 0, minPrice = 9999;
+  data.forEach(d => {{
+    if (d.high && d.high > maxPrice) maxPrice = d.high;
+    if (d.low && d.low < minPrice) minPrice = d.low;
+  }});
+  const range = maxPrice - minPrice || 1;
+  const padding = 10;
+  const chartH = h - padding * 2;
+  const chartW = w - padding * 2;
+  const barWidth = chartW / data.length * 0.6;
+
+  // 画K线
+  data.forEach((d, i) => {{
+    const x = padding + (chartW / data.length) * i + (chartW / data.length - barWidth) / 2;
+    const yOpen = padding + chartH * (1 - (d.open - minPrice) / range);
+    const yClose = padding + chartH * (1 - (d.close - minPrice) / range);
+    const yHigh = padding + chartH * (1 - (d.high - minPrice) / range);
+    const yLow = padding + chartH * (1 - (d.low - minPrice) / range);
+
+    // 红涨绿跌
+    const color = d.close >= d.open ? '#d32f2f' : '#2e7d32';
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+
+    // 上下影线
+    ctx.beginPath();
+    ctx.moveTo(x + barWidth / 2, yHigh);
+    ctx.lineTo(x + barWidth / 2, yLow);
+    ctx.stroke();
+
+    // 实体
+    const yTop = Math.min(yOpen, yClose);
+    const barH = Math.max(Math.abs(yClose - yOpen), 1);
+    ctx.fillRect(x, yTop, barWidth, barH);
+  }});
+
+  // 画价格标签
+  ctx.fillStyle = '#666';
+  ctx.font = '10px sans-serif';
+  ctx.fillText(maxPrice.toFixed(2), 5, padding + 8);
+  ctx.fillText(minPrice.toFixed(2), 5, h - padding);
+}}
 </script>
 </body></html>"""
 
