@@ -93,30 +93,11 @@ def calc_trade(code, price):
         close = pd.to_numeric(hist["close"], errors="coerce")
         low   = pd.to_numeric(hist["low"],  errors="coerce")
         high  = pd.to_numeric(hist["high"], errors="coerce")
-        open_ = pd.to_numeric(hist["open"], errors="coerce")
         ma5  = close.tail(5).mean()
         ma20 = close.tail(20).mean()
         low20 = low.tail(20).min()
         if pd.isna(ma20):
             return fallback
-        # 最近30天K线数据（用于画图）
-        kline_data = []
-        try:
-            dates = hist["date"].tail(30).tolist()
-            for i in range(len(dates)):
-                kline_data.append({
-                    "date": str(dates[i]),
-                    "open": round(float(open_.iloc[-30+i]), 2) if i < len(open_) else None,
-                    "close": round(float(close.iloc[-30+i]), 2) if i < len(close) else None,
-                    "low": round(float(low.iloc[-30+i]), 2) if i < len(low) else None,
-                    "high": round(float(high.iloc[-30+i]), 2) if i < len(high) else None,
-                })
-        except Exception:
-            kline_data = []
-        # 涨跌停价（A股主板±10%）
-        prev_close = float(close.iloc[-2]) if len(close) >= 2 else price
-        limit_up = round(prev_close * 1.1, 2)
-        limit_down = round(prev_close * 0.9, 2)
         # 状态
         if price >= ma20:
             dist = (price - ma5) / ma5 * 100 if (pd.notna(ma5) and ma5 > 0) else 0
@@ -145,35 +126,6 @@ def calc_trade(code, price):
         # 买入前确认清单
         confirm = (f"买前确认：①资金够买1手 ②券商挂限价单，填在{buy_low}~{buy_high}元区间 "
                    f"③同时设好止损单{stop}元 ④每次只买1手、不满仓")
-
-        # ===== 24小时走向预判 =====
-        # 基于均线趋势、价格位置、近期动量综合判断
-        recent_5d_chg = ((close.iloc[-1] - close.iloc[-6]) / close.iloc[-6] * 100) if len(close) >= 6 else 0
-        avg_daily_range = ((high.tail(20) - low.tail(20)) / close.tail(20)).mean() * 100 if len(close) >= 20 else 2.0
-        ma_trend = "up" if ma5 > ma20 else "down"
-        price_vs_ma5 = (price - ma5) / ma5 * 100 if ma5 > 0 else 0
-
-        if ma_trend == "up" and price_vs_ma5 > 0 and recent_5d_chg > 0:
-            trend = "看多"
-            trend_reason = f"均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨{recent_5d_chg:.1f}%"
-            confidence = "高"
-        elif ma_trend == "down" and price_vs_ma5 < 0 and recent_5d_chg < 0:
-            trend = "看空"
-            trend_reason = f"均线空头排列(MA5<MA20)，价格在MA5下方，近5日跌{abs(recent_5d_chg):.1f}%"
-            confidence = "高"
-        elif ma_trend == "up":
-            trend = "偏多震荡"
-            trend_reason = f"均线向上但价格回踩MA5，近5日涨跌{recent_5d_chg:+.1f}%，需观察能否企稳"
-            confidence = "中"
-        else:
-            trend = "偏空震荡"
-            trend_reason = f"均线向下但价格反弹至MA5附近，近5日涨跌{recent_5d_chg:+.1f}%，反弹力度待确认"
-            confidence = "中"
-
-        # 预期波动区间（基于近20天平均日波动）
-        expect_up = round(price * (1 + avg_daily_range / 100), 2)
-        expect_down = round(price * (1 - avg_daily_range / 100), 2)
-
         return {
             "state": state, "advice": advice,
             "buy_ref": round(price, 2), "stop_loss": stop, "take_profit": take,
@@ -181,11 +133,6 @@ def calc_trade(code, price):
             "ma20": round(ma20, 2), "low20": round(low20, 2),
             "buy_low": buy_low, "buy_high": buy_high,
             "risk_note": risk_note, "confirm": confirm,
-            "kline": kline_data,
-            "limit_up": limit_up, "limit_down": limit_down,
-            "trend_24h": trend, "trend_reason": trend_reason,
-            "expect_up": expect_up, "expect_down": expect_down,
-            "trend_confidence": confidence,
         }
     except Exception:
         return fallback
@@ -193,15 +140,6 @@ def calc_trade(code, price):
 print("正在拉取全市场行情（多数据源自动切换）...")
 df, src = fetch_all()
 print(f"已拿到全市场 {len(df)} 只股票（数据源:{src}，可用资金:¥{BUDGET:.2f}）")
-
-# 提取全A股股票列表（用于前端本地搜索）
-all_stocks = []
-for _, row in df.iterrows():
-    code = str(row.get("code", ""))
-    name = str(row.get("name", ""))
-    if code and name:
-        all_stocks.append({"code": code, "name": name})
-print(f"已提取 {len(all_stocks)} 只股票用于前端搜索")
 
 # ============ 5. "能不能买"的过滤（资金约束优先） ============
 def 板块_可买(code):
@@ -243,44 +181,6 @@ scored.sort(reverse=True, key=lambda x: x[0])
 top = scored[:TOP_N]
 print(f"达到信号门槛(≥3分)的有 {len(scored)} 只，取前 {TOP_N} 只")
 
-# ============ 6.5 涨停预测（专门筛选当日涨停潜力股） ============
-def 涨停预测分(r):
-    """计算涨停潜力分数"""
-    s, reasons = 0, []
-    # 当天涨幅3%-9%（还没涨停，但已经有涨幅）
-    if pd.notna(r["chg"]):
-        if 3 <= r["chg"] <= 9:
-            s += 3; reasons.append(f"今日已涨{r['chg']:.1f}%，有冲涨停动力")
-        elif 1 <= r["chg"] < 3:
-            s += 1; reasons.append(f"今日小涨{r['chg']:.1f}%，蓄势中")
-    # 量比放大（>1.5说明资金涌入）
-    if pd.notna(r["lb"]) and r["lb"] > 1.5:
-        s += 2; reasons.append(f"量比{r['lb']:.1f}，资金明显涌入")
-    # 换手率活跃（2%-10%）
-    if pd.notna(r["hsl"]) and 2 <= r["hsl"] <= 10:
-        s += 1; reasons.append(f"换手{r['hsl']:.1f}%，交投活跃")
-    # 主力资金流入
-    if pd.notna(r["mflow"]) and r["mflow"] > 0:
-        s += 1; reasons.append("主力资金净流入")
-    # 近期走势强势
-    if pd.notna(r["chg5"]) and r["chg5"] > 0:
-        s += 1; reasons.append(f"近5日涨{r['chg5']:.1f}%，趋势向上")
-    if pd.notna(r["chg10"]) and r["chg10"] > 0:
-        s += 1; reasons.append(f"近10日涨{r['chg10']:.1f}%，中期走强")
-    # 价格在合理区间（5-30元，更容易拉涨停）
-    if pd.notna(r["price"]) and 5 <= r["price"] <= 30:
-        s += 1; reasons.append(f"股价{r['price']:.1f}元，盘子适中易拉升")
-    return s, reasons
-
-limit_up_candidates = []
-for r in rows:
-    s, reasons = 涨停预测分(r)
-    if s >= 5:  # 涨停潜力分≥5分
-        limit_up_candidates.append((s, r, reasons))
-limit_up_candidates.sort(reverse=True, key=lambda x: x[0])
-limit_up_top = limit_up_candidates[:5]  # 取前5只
-print(f"涨停预测：找到 {len(limit_up_candidates)} 只潜力股，取前 {len(limit_up_top)} 只")
-
 # ============ 7. 组装结果（含买卖点） ============
 print("正在逐只拉历史K线算买卖点（约半分钟）...")
 out = []
@@ -303,26 +203,12 @@ for s, r, why in top:
         "trade": trade,
     })
 
-# ============ 7.5 组装涨停预测结果 ============
-limit_up_out = []
-for s, r, reasons in limit_up_top:
-    price = r["price"]
-    limit_up_out.append({
-        "code": str(r["code"]), "name": str(r.get("name", "")),
-        "price": round(price, 2),
-        "chg": round(r["chg"], 2) if pd.notna(r["chg"]) else None,
-        "lb": round(r["lb"], 2) if pd.notna(r["lb"]) else None,
-        "hsl": round(r["hsl"], 2) if pd.notna(r["hsl"]) else None,
-        "score": s, "reasons": reasons,
-    })
-
 now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
 # 保存数据备份 data.json
 with open("data.json", "w", encoding="utf-8") as f:
     json.dump({"updated": now, "source": src, "budget": BUDGET,
-               "count": len(out), "candidates": out,
-               "limit_up_picks": limit_up_out}, f, ensure_ascii=False, indent=2)
+               "count": len(out), "candidates": out}, f, ensure_ascii=False, indent=2)
 
 # ============ 8. 生成手机友好页面 index.html ============
 def esc(x):
@@ -349,14 +235,6 @@ for r in out:
     stop = f"¥{t['stop_loss']:.2f}" if t.get("stop_loss") else "--"
     take = f"¥{t['take_profit']:.2f}" if t.get("take_profit") else "--"
     risk_html = f'<div class="t-risk">⚠ {esc(t["risk_note"])}</div>' if t.get("risk_note") else ""
-    # 24小时预判颜色
-    trend = t.get("trend_24h", "")
-    if "看多" in trend:
-        trend_bg, trend_border, trend_color = "#ffebee", "#c62828", "#c62828"
-    elif "看空" in trend:
-        trend_bg, trend_border, trend_color = "#e8f5e9", "#2e7d32", "#2e7d32"
-    else:
-        trend_bg, trend_border, trend_color = "#fff8e1", "#f9a825", "#f57f17"
     cards += f"""
     <div class="card">
       <div class="card-top">
@@ -365,17 +243,8 @@ for r in out:
              <span class="state" style="background:{bg};color:{fg}">{esc(t['state'])}</span></div>
       </div>
       <div class="price-line">
-        <span class="price" data-code="{esc(r['code'])}">¥{r['price']:.2f}</span>
-        <span class="chg" data-code="{esc(r['code'])}" style="color:{c_chg}">{fmt_pct(r['chg'])}</span>
-      </div>
-      <div class="limit-row">
-        <span class="limit-up">涨停 ¥{t.get('limit_up', '--')}</span>
-        <span class="limit-down">跌停 ¥{t.get('limit_down', '--')}</span>
-      </div>
-      <div class="trend-row" style="margin:6px 0;padding:6px 10px;border-radius:6px;background:{trend_bg};border-left:3px solid {trend_border};">
-        <div style="font-size:13px;font-weight:600;color:{trend_color};">📊 24小时预判：{esc(t.get('trend_24h', '--'))} <span style="font-size:11px;font-weight:400;color:#666;">（置信度：{esc(t.get('trend_confidence', '--'))}）</span></div>
-        <div style="font-size:11px;color:#555;margin-top:2px;">预期区间 ¥{t.get('expect_down', '--')} ~ ¥{t.get('expect_up', '--')}</div>
-        <div style="font-size:11px;color:#888;margin-top:2px;">{esc(t.get('trend_reason', ''))}</div>
+        <span class="price">¥{r['price']:.2f}</span>
+        <span class="chg" style="color:{c_chg}">{fmt_pct(r['chg'])}</span>
       </div>
       <div class="tags">
         <span class="tag" style="color:{color(r['chg5'])}">{chg5}</span>
@@ -392,16 +261,6 @@ for r in out:
       </div>
       <div class="why">{esc(r['why'])}</div>
       <div class="hands">你的 ¥{BUDGET:.0f} 可买 <b>{r['hands']}手</b>（约{r['cost']}元，一手=100股）</div>
-      <div>
-        <button class="trade-btn btn-buy" onclick="recordTrade('buy','{esc(r['code'])}','{esc(r['name'])}',{r['price']})">记录买入</button>
-        <button class="trade-btn btn-sell" onclick="recordTrade('sell','{esc(r['code'])}','{esc(r['name'])}',{r['price']})">记录卖出</button>
-        <button class="trade-btn btn-chart" onclick="toggleChart('chart_{esc(r['code'])}')">K线图</button>
-      </div>
-      <div id="chart_{esc(r['code'])}" class="chart-container" style="display:none;">
-        <div class="chart-title">近30日K线</div>
-        <canvas id="canvas_{esc(r['code'])}" width="600" height="200"></canvas>
-        <script type="application/json" id="data_{esc(r['code'])}">{json.dumps(t.get('kline', []), ensure_ascii=False)}</script>
-      </div>
     </div>"""
 
 wallet_rows = ""
@@ -412,14 +271,14 @@ for item in WALLET_LEDGER[-5:][::-1]:
 wallet_html = f"""
 <div class="card wallet">
   <div class="card-top"><div class="name">资金账户</div>
-    <div class="w-total">当前可用 <b onclick="editBudget()" style="cursor:pointer;text-decoration:underline;color:#1a237e;" title="点击编辑">¥{BUDGET:.2f}</b> <button onclick="editBudget()" style="margin-left:8px;font-size:12px;padding:3px 10px;background:#1a237e;color:#fff;border:none;border-radius:4px;cursor:pointer;">编辑</button></div></div>
+    <div class="w-total">当前可用 <b>¥{BUDGET:.2f}</b></div></div>
   <div class="w-rows">{wallet_rows}</div>
-  <div class="w-hint">点"编辑"可直接修改可用资金，数据保存在本地。</div>
-  <div class="trades">
-    <h3>📋 我的交易记录</h3>
-    <div id="tradeList"><div style="font-size:12px;color:#999;">还没有交易记录，点下面的按钮开始记录</div></div>
-  </div>
+  <div class="w-hint">要转入资金？本地运行 <b>python add_fund.py</b>，然后重新部署即可。</div>
 </div>"""
+
+EXTRA_CSS = '\n  .search-box { display:flex; gap:8px; margin-bottom:10px; position:relative; }\n  .search-box input { flex:1; padding:11px 12px; border:1px solid #d0d0d0; border-radius:8px; font-size:14px; outline:none; }\n  .search-box input:focus { border-color:#1a237e; }\n  .search-box button { padding:11px 16px; background:#1a237e; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; }\n  #searchResult { display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; border:1px solid #ddd; border-radius:8px;\n                  background:#fff; box-shadow:0 4px 12px rgba(0,0,0,.15); z-index:1000; max-height:300px; overflow-y:auto; }\n  .budget-line { text-align:center; font-size:14px; color:#1a237e; background:#e8eaf6; border-radius:8px; padding:9px; margin-bottom:12px; }\n  .budget-line b { cursor:pointer; text-decoration:underline; }\n'
+SEARCH_HTML = '<div class="search-box">\n  <input type="text" id="searchInput" placeholder="输入股票代码/名称，全网搜索..." onkeydown="if(event.key===\'Enter\')searchStocks()">\n  <button onclick="searchStocks()">🔍 搜索</button>\n  <div id="searchResult"></div>\n</div>\n<div class="budget-line">可用资金 <b id="budgetDisplay" onclick="editBudget()" title="点击编辑">¥1000.00</b>（点我直接改，存本地）</div>\n'
+APP_JS = '\n// ===== 资金（可编辑，存本地） =====\nfunction getBudget(){ try{ return parseFloat(localStorage.getItem(\'myBudget\'))||1000; }catch(e){ return 1000; } }\nfunction setBudget(v){ localStorage.setItem(\'myBudget\', v); refreshBudgetDisplay(); }\nfunction refreshBudgetDisplay(){ var el=document.getElementById(\'budgetDisplay\'); if(el) el.textContent=\'¥\'+getBudget().toFixed(2); }\nfunction editBudget(){ var v=prompt(\'请输入可用资金（元）：\', getBudget()); if(!v||isNaN(v)||parseFloat(v)<=0) return; setBudget(parseFloat(v)); alert(\'资金已更新：¥\'+parseFloat(v).toFixed(2)); }\n\n// ===== 交易费用 =====\nfunction calcFee(amount,type){ var c=Math.max(amount*0.00025,5); var t=amount*0.00002; var s=0; if(type===\'sell\') s=amount*0.001; return c+t+s; }\n\n// ===== 交易记录（存本地） =====\nfunction getTrades(){ try{ return JSON.parse(localStorage.getItem(\'myTrades\')||\'[]\'); }catch(e){ return []; } }\nfunction saveTrades(t){ localStorage.setItem(\'myTrades\', JSON.stringify(t)); }\n\n// ===== 全网搜索（JSONP，腾讯smartbox） =====\nfunction searchStocks(){\n  var keyword=(document.getElementById(\'searchInput\').value||\'\').trim();\n  if(!keyword) return;\n  var div=document.getElementById(\'searchResult\');\n  var cb=\'searchCb_\'+Date.now();\n  window[cb]=function(results){\n    try{\n      if(!results||!results.length){ div.innerHTML=\'<div style="padding:14px;color:#999;font-size:13px;">未找到匹配股票</div>\'; div.style.display=\'block\'; return; }\n      var html=\'\';\n      results.forEach(function(r){\n        html+=\'<div onclick="closeSearch();showStockDetail(\\\'\'+r.code+\'\\\',\\\'\'+r.name+\'\\\')" style="padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">\';\n        html+=\'<span><b style="color:#1a237e;">\'+r.name+\'</b></span><span style="color:#666;font-size:12px;background:#f5f5f5;padding:2px 8px;border-radius:4px;">\'+r.code+\'</span></div>\';\n      });\n      div.innerHTML=html; div.style.display=\'block\';\n    }finally{ delete window[cb]; var s=document.getElementById(cb); if(s&&s.parentNode) s.parentNode.removeChild(s); }\n  };\n  var s=document.createElement(\'script\'); s.id=cb;\n  s.src=\'https://smartbox.gtimg.cn/s3/?v=2&q=\'+encodeURIComponent(keyword)+\'&t=all\';\n  s.onload=function(){\n    try{\n      var raw=window.v_hint||\'\';\n      if(!raw){ div.innerHTML=\'<div style="padding:14px;color:#999;font-size:13px;">未找到匹配股票</div>\'; div.style.display=\'block\'; }\n      else{\n        var results=[];\n        raw.split(\'^\').forEach(function(item){ var p=item.split(\'~\'); if(p.length>=3&&p[4]&&p[4].indexOf(\'GP\')===0){ results.push({code:p[0]+p[1],name:p[2]}); } });\n        window[cb](results);\n      }\n    }catch(e){ console.log(\'搜索解析失败\',e); }\n    if(s.parentNode) s.parentNode.removeChild(s);\n  };\n  s.onerror=function(){ div.innerHTML=\'<div style="padding:14px;color:#999;font-size:13px;">搜索失败，请检查网络后重试</div>\'; div.style.display=\'block\'; if(s.parentNode) s.parentNode.removeChild(s); };\n  document.body.appendChild(s);\n}\nfunction closeSearch(){ var div=document.getElementById(\'searchResult\'); if(div) div.style.display=\'none\'; }\n\n// ===== 行情详情（JSONP，腾讯qt） =====\nfunction showStockDetail(code,name){\n  closeSearch();\n  var cb=\'detailCb_\'+Date.now();\n  window[cb]=function(){\n    try{\n      var data=window[\'v_\'+code];\n      if(!data||typeof data!==\'string\'){ alert(\'获取行情失败，请重试\'); return; }\n      var parts=data.split(\'~\');\n      if(parts.length<35) return;\n      var price=parseFloat(parts[3]),chg=parseFloat(parts[32]),open=parseFloat(parts[5]),high=parseFloat(parts[33]),low=parseFloat(parts[34]),prevClose=parseFloat(parts[4]);\n      var limitUp=(prevClose*1.1).toFixed(2),limitDown=(prevClose*0.9).toFixed(2);\n      var chgColor=chg>=0?\'#c62828\':\'#2e7d32\';\n      var budget=getBudget();\n      var maxQty=Math.floor(budget/price/100)*100;\n      var canBuy=maxQty>=100;\n      var html=\n        \'<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">\'+\n        \'<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;">\'+\n        \'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">\'+\n        \'<div><h2 style="margin:0;font-size:18px;">\'+name+\'</h2><div style="color:#666;font-size:12px;">\'+code+\'</div></div>\'+\n        \'<button onclick="closeStockDetail()" style="background:#eee;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;">×</button></div>\'+\n        \'<div style="text-align:center;margin:20px 0;">\'+\n        \'<div style="font-size:36px;font-weight:bold;color:\'+chgColor+\';">¥\'+price.toFixed(2)+\'</div>\'+\n        \'<div style="color:\'+chgColor+\';font-size:16px;">\'+(chg>=0?\'+\':\'\')+chg.toFixed(2)+\'%</div></div>\'+\n        \'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">\'+\n        \'<div>今开：¥\'+open.toFixed(2)+\'</div><div>昨收：¥\'+prevClose.toFixed(2)+\'</div>\'+\n        \'<div>最高：¥\'+high.toFixed(2)+\'</div><div>最低：¥\'+low.toFixed(2)+\'</div>\'+\n        \'<div style="color:#c62828;">涨停：¥\'+limitUp+\'</div><div style="color:#2e7d32;">跌停：¥\'+limitDown+\'</div></div>\'+\n        \'<div style="margin-top:16px;padding:10px;background:#e8eaf6;border-radius:8px;font-size:13px;text-align:center;">\'+\n        \'可用资金：<b>¥\'+budget.toFixed(2)+\'</b> · 当前价可买：<b>\'+(canBuy?maxQty+\'股\':\'资金不足\')+\'</b></div>\'+\n        \'<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">\'+\n        \'<button onclick="buyWithBudget(\\\'\'+code+\'\\\',\\\'\'+name+\'\\\',\'+price+\')" style="flex:1;padding:12px;background:#c62828;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;\'+(canBuy?\'\':\'opacity:0.5;\')+\'">⚡一键模拟买入</button>\'+\n        \'<button onclick="recordTrade(\\\'buy\\\',\\\'\'+code+\'\\\',\\\'\'+name+\'\\\',\'+price+\')" style="flex:1;padding:12px;background:#ff7043;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录买入</button></div>\'+\n        \'<div style="margin-top:8px;"><button onclick="recordTrade(\\\'sell\\\',\\\'\'+code+\'\\\',\\\'\'+name+\'\\\',\'+price+\')" style="width:100%;padding:12px;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录卖出</button></div>\'+\n        \'<div style="margin-top:12px;font-size:11px;color:#999;text-align:center;">⚠️ 模拟交易仅记录本地，不连接券商，不构成投资建议</div>\'+\n        \'</div></div>\';\n      var m=document.getElementById(\'stockDetailModal\');\n      if(!m){ m=document.createElement(\'div\'); m.id=\'stockDetailModal\'; document.body.appendChild(m); }\n      m.innerHTML=html; m.style.display=\'block\';\n    }catch(e){ console.log(\'详情解析失败\',e); alert(\'获取行情失败，请重试\'); }\n    finally{ delete window[cb]; var s=document.getElementById(cb); if(s&&s.parentNode) s.parentNode.removeChild(s); }\n  };\n  var s=document.createElement(\'script\'); s.id=cb; s.src=\'https://qt.gtimg.cn/q=\'+code;\n  s.onload=function(){ try{ window[cb](); }catch(e){} if(s.parentNode) s.parentNode.removeChild(s); };\n  s.onerror=function(){ try{ window[cb](); }catch(e){ alert(\'获取行情失败，请检查网络\'); } if(s.parentNode) s.parentNode.removeChild(s); };\n  document.body.appendChild(s);\n}\nfunction closeStockDetail(){ var m=document.getElementById(\'stockDetailModal\'); if(m) m.style.display=\'none\'; }\n\n// ===== 一键模拟买入 =====\nfunction buyWithBudget(code,name,price){\n  var budget=getBudget();\n  var maxQty=Math.floor(budget/price/100)*100;\n  if(maxQty<100){ alert(\'可用资金不足！\\n可用资金：¥\'+budget.toFixed(2)+\'\\n当前价：¥\'+price.toFixed(2)+\'\\n买1手(100股)需要：¥\'+(price*100).toFixed(2)); return; }\n  var amount=price*maxQty, fee=calcFee(amount,\'buy\'), total=amount+fee;\n  if(total>budget){ var q2=maxQty-100; if(q2<100){ alert(\'交易费用后资金不足，请调整\'); return; } maxQty=q2; amount=price*maxQty; fee=calcFee(amount,\'buy\'); total=amount+fee; }\n  var trades=getTrades();\n  trades.push({type:\'buy\',code:code,name:name,price:price,qty:maxQty,amount:amount,fee:fee,time:new Date().toLocaleString(\'zh-CN\'),auto:true});\n  saveTrades(trades);\n  setBudget(budget-total);\n  alert(\'⚡ 模拟买入成功！\\n\'+name+\' \'+maxQty+\'股 @ ¥\'+price.toFixed(2)+\'\\n成交金额：¥\'+amount.toFixed(2)+\'\\n交易费用：¥\'+fee.toFixed(2)+\'\\n实际支出：¥\'+total.toFixed(2)+\'\\n剩余资金：¥\'+(budget-total).toFixed(2));\n  closeStockDetail();\n}\n\n// ===== 手动记录交易 =====\nfunction recordTrade(type,code,name,price){\n  var pi=prompt(\'请输入实际成交价格（元）：\',price); if(!pi||isNaN(pi)||parseFloat(pi)<=0) return;\n  var qi=prompt(\'请输入数量（股），1手=100股：\',\'100\'); if(!qi||isNaN(qi)||parseInt(qi)<=0) return;\n  var p=parseFloat(pi), q=parseInt(qi), amt=p*q, fee=calcFee(amt,type);\n  var trades=getTrades(); trades.push({type:type,code:code,name:name,price:p,qty:q,amount:amt,fee:fee,time:new Date().toLocaleString(\'zh-CN\')}); saveTrades(trades);\n  alert((type===\'buy\'?\'买入\':\'卖出\')+\'记录成功：\\n\'+name+\' \'+q+\'股 @ ¥\'+p.toFixed(2)+\'\\n成交金额：¥\'+amt.toFixed(2)+\'\\n交易费用：¥\'+fee.toFixed(2)+\'\\n实际支出：¥\'+(amt+fee).toFixed(2));\n  closeStockDetail();\n}\n\nrefreshBudgetDisplay();\n'
 
 html_doc = f"""<!DOCTYPE html>
 <html lang="zh"><head><meta charset="utf-8">
@@ -474,629 +333,25 @@ html_doc = f"""<!DOCTYPE html>
   .w-amt {{ font-weight:bold; color:#2e7d32; }}
   .w-note {{ color:#666; flex:1; }}
   .w-hint {{ font-size:12px; color:#888; margin-top:6px; }}
-  .trade-btn {{ display:inline-block; margin:6px 6px 0 0; padding:7px 16px; border-radius:8px;
-               border:none; font-size:13px; font-weight:bold; cursor:pointer; }}
-  .btn-buy {{ background:#c62828; color:#fff; }}
-  .btn-sell {{ background:#2e7d32; color:#fff; }}
-  .trades {{ margin-top:10px; border-top:1px solid #eee; padding-top:10px; }}
-  .trades h3 {{ font-size:14px; color:#1a237e; margin-bottom:6px; }}
-  .trade-item {{ font-size:12px; padding:5px 0; border-bottom:1px dashed #eee; color:#444; }}
-  .pnl-pos {{ color:#c62828; font-weight:bold; }}
-  .pnl-neg {{ color:#2e7d32; font-weight:bold; }}
-  .limit-row {{ display:flex; gap:12px; font-size:12px; margin:4px 0 8px; }}
-  .limit-up {{ color:#c62828; background:#ffebee; padding:2px 8px; border-radius:4px; }}
-  .limit-down {{ color:#2e7d32; background:#e8f5e9; padding:2px 8px; border-radius:4px; }}
-  .btn-chart {{ background:#1a237e; color:#fff; }}
-  .chart-container {{ margin-top:10px; border:1px solid #eee; border-radius:8px; padding:8px; background:#fafafa; }}
-  .chart-title {{ font-size:12px; color:#666; margin-bottom:4px; }}
-  .chart-container canvas {{ width:100%; height:200px; }}
-  .search-box {{ margin:10px 0; display:flex; gap:8px; }}
-  .search-box input {{ flex:1; padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:14px; box-sizing:border-box; }}
-  .search-box input:focus {{ outline:none; border-color:#1a237e; }}
-  .search-box button {{ padding:10px 20px; background:#1a237e; color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer; }}
-  .search-box button:active {{ background:#283593; }}
   .foot {{ font-size:11px; color:#999; text-align:center; margin-top:16px; line-height:1.6; }}
-</style></head><body>
+{EXTRA_CSS}</style></head><body>
 <h1>今日候选清单</h1>
-<div class="sub">数据更新于 {now} · 当前时间：<span id="currentTime"></span> · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f}</div>
-
-<!-- 大盘指数 -->
-<div style="margin:10px 0;padding:10px;background:#f5f5f5;border-radius:8px;display:flex;justify-content:space-around;text-align:center;">
-  <div>
-    <div style="font-size:12px;color:#666;">上证指数</div>
-    <div id="shIndex" style="font-size:16px;font-weight:bold;">--</div>
-  </div>
-  <div>
-    <div style="font-size:12px;color:#666;">深证成指</div>
-    <div id="szIndex" style="font-size:16px;font-weight:bold;">--</div>
-  </div>
-  <div>
-    <div style="font-size:12px;color:#666;">创业板指</div>
-    <div id="cyIndex" style="font-size:16px;font-weight:bold;">--</div>
-  </div>
-</div>
-
-<!-- 新手引导（3步） -->
-<div class="tip" style="background:#e3f2fd;border-left:4px solid #1976d2;">
-  <b>📱 新手3步上手：</b><br>
-  ① 看下面推荐的股票，"✅可买"的可以考虑买入<br>
-  ② 点"记录买入"，输入实际成交价格<br>
-  ③ 系统自动帮你盯止盈止损，到点提醒你<br>
-  <span style="color:#d32f2f;font-size:12px;">⚠️ 新手提醒：先小钱练手，别重仓！</span>
-</div>
-
-<!-- 今日涨停预计 -->
-<div style="margin:14px 0;padding:14px;background:linear-gradient(135deg,#ff6b6b,#ee5a24);border-radius:12px;color:#fff;">
-  <div style="font-size:16px;font-weight:bold;margin-bottom:10px;">🔥 今日涨停预计（短线潜力股）</div>
-  <div style="font-size:12px;opacity:0.9;margin-bottom:10px;">以下是根据资金面、技术面筛选的今日涨停潜力股，仅供参考，不构成投资建议</div>
-  {''.join(f'''
-  <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:10px;margin-bottom:8px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div><b>{esc(r['name'])}</b> <span style="font-size:11px;opacity:0.8;">{esc(r['code'])}</span></div>
-      <div style="text-align:right;">
-        <div style="font-size:18px;font-weight:bold;">¥{r['price']:.2f}</div>
-        <div style="font-size:12px;">{fmt_pct(r['chg'])}</div>
-      </div>
-    </div>
-    <div style="font-size:11px;margin-top:6px;opacity:0.95;">
-      <b>推荐理由：</b><br>
-      {''.join('· ' + esc(reason) + '<br>' for reason in r['reasons'])}
-    </div>
-    <div style="margin-top:6px;font-size:11px;opacity:0.8;">
-      量比 {r['lb'] if r['lb'] else '--'} · 换手 {r['hsl'] if r['hsl'] else '--'}% · 涨停潜力分 {r['score']}分
-    </div>
-  </div>
-  ''' for r in limit_up_out)}
-  <div style="font-size:11px;opacity:0.8;text-align:center;margin-top:6px;">⚠️ 涨停预测仅供参考，实际走势受多种因素影响，注意风险</div>
-</div>
-
-<div class="search-box">
-  <input type="text" id="searchInput" placeholder="输入股票代码或名称..." onkeydown="if(event.key==='Enter')searchStocks()">
-  <button onclick="searchStocks()">🔍 搜索</button>
-</div>
+<div class="sub">更新于 {now} · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f}</div>
+<div class="tip"><b>怎么用：</b>看卡片【状态】——"可买"按【建议买入区间】挂限价单买1手；"等回踩"别追高；"观望"先别碰。<br>
+买入后设好<b>止损</b>(跌到就走)和<b>止盈</b>(涨到落袋)。<b>提醒：</b>数据筛选，非投资建议；涨跌有风险，控制仓位。</div>
+{SEARCH_HTML}
 <div class="stat">
   <div><b>{len(out)}</b><span>今日候选</span></div>
   <div><b>{len(pool)}</b><span>买得起的候选</span></div>
   <div><b>{sum(1 for x in out if x['trade']['state']=='可买')}</b><span>"可买"数量</span></div>
 </div>
 {wallet_html}
-<div id="stockCards">
 {cards}
-</div>
-
-<!-- 新手常见问题 -->
-<div style="margin:20px 0;padding:14px;background:#fff3e0;border-radius:8px;">
-  <div style="font-weight:bold;margin-bottom:8px;">❓ 新手常见问题</div>
-  <div style="font-size:13px;line-height:1.8;">
-    <b>Q：怎么添加到手机桌面？</b><br>
-    A：手机浏览器打开本页 → 菜单 → "添加到主屏幕"，就像App一样用。<br><br>
-    <b>Q：交易记录存在哪？</b><br>
-    A：存在你手机本地（浏览器缓存），不会上传到服务器。<br><br>
-    <b>Q：怎么清空记录重新开始？</b><br>
-    A：点下面的"清空所有记录"按钮。<br><br>
-    <button onclick="clearAllData()" style="margin-top:8px;padding:8px 16px;background:#f44336;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🗑️ 清空所有记录</button>
-  </div>
-</div>
-
 <div class="foot">状态依据：现价 vs 20日均线、离5日均线远近；买入区间=现价与MA5之间。<br>
-⚠️ 本工具仅为数据筛选参考，不构成投资建议。股市有风险，入市需谨慎。</div>
+资金账户：本地 python add_fund.py 转入资金后重新部署 · 添加到主屏幕即可像App一样用 · 每天收盘后自动更新</div>
 <script>
+{APP_JS}
 if ('serviceWorker' in navigator) {{ navigator.serviceWorker.register('./service-worker.js'); }}
-
-// 清空所有数据
-function clearAllData() {{
-  if (!confirm('确定要清空所有交易记录和资金设置吗？此操作不可恢复！')) return;
-  localStorage.removeItem('myTrades');
-  localStorage.removeItem('myBudget');
-  alert('已清空所有记录！');
-  location.reload();
-}}
-
-// 实时更新当前时间
-function updateCurrentTime() {{
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-  const weekday = weekdays[now.getDay()];
-  const timeStr = `${{year}}-${{month}}-${{day}} ${{weekday}} ${{hours}}:${{minutes}}:${{seconds}}`;
-  document.getElementById('currentTime').textContent = timeStr;
-}}
-updateCurrentTime();
-setInterval(updateCurrentTime, 1000);
-
-// 获取大盘指数（JSONP方式）
-function fetchMarketIndex() {{
-  const script = document.createElement('script');
-  script.src = 'https://qt.gtimg.cn/q=sh000001,sz399001,sz399006';
-  script.onload = () => {{
-    try {{
-      // 上证指数
-      if (typeof v_sh000001 !== 'undefined') {{
-        const parts = v_sh000001.split('~');
-        const price = parseFloat(parts[3]);
-        const chg = parseFloat(parts[32]);
-        if (price) {{
-          document.getElementById('shIndex').textContent = price.toFixed(2);
-          document.getElementById('shIndex').style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
-        }}
-      }}
-      // 深证成指
-      if (typeof v_sz399001 !== 'undefined') {{
-        const parts = v_sz399001.split('~');
-        const price = parseFloat(parts[3]);
-        const chg = parseFloat(parts[32]);
-        if (price) {{
-          document.getElementById('szIndex').textContent = price.toFixed(2);
-          document.getElementById('szIndex').style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
-        }}
-      }}
-      // 创业板指
-      if (typeof v_sz399006 !== 'undefined') {{
-        const parts = v_sz399006.split('~');
-        const price = parseFloat(parts[3]);
-        const chg = parseFloat(parts[32]);
-        if (price) {{
-          document.getElementById('cyIndex').textContent = price.toFixed(2);
-          document.getElementById('cyIndex').style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
-        }}
-      }}
-    }} catch(e) {{
-      console.log('大盘指数解析失败', e);
-    }}
-    document.body.removeChild(script);
-  }};
-  script.onerror = () => {{
-    document.body.removeChild(script);
-  }};
-  document.body.appendChild(script);
-}}
-fetchMarketIndex();
-setInterval(fetchMarketIndex, 10000); // 每10秒刷新一次
-
-// JSONP辅助函数（绕过CORS跨域限制）
-function jsonp(url, callbackName) {{
-  return new Promise((resolve, reject) => {{
-    const script = document.createElement('script');
-    // 创建全局回调函数
-    window[callbackName] = (data) => {{
-      resolve(data);
-      // 清理
-      delete window[callbackName];
-      document.body.removeChild(script);
-    }};
-    script.src = url;
-    script.onerror = () => {{
-      reject(new Error('JSONP请求失败'));
-      document.body.removeChild(script);
-    }};
-    document.body.appendChild(script);
-  }});
-}}
-
-// 搜索股票功能（从当前页面股票列表过滤）
-function searchStocks() {{
-  const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-  
-  // 从当前页面的股票卡片搜索
-  const cards = document.querySelectorAll('#stockCards .card');
-  let matchCount = 0;
-  cards.forEach(card => {{
-    const name = card.querySelector('.name')?.textContent.toLowerCase() || '';
-    const code = card.querySelector('.code')?.textContent.toLowerCase() || '';
-    if (!keyword || name.includes(keyword) || code.includes(keyword)) {{
-      card.style.display = '';
-      matchCount++;
-    }} else {{
-      card.style.display = 'none';
-    }}
-  }});
-  
-  // 隐藏搜索结果下拉框
-  const searchResult = document.getElementById('searchResult');
-  if (searchResult) searchResult.style.display = 'none';
-  
-  // 提示搜索结果数量
-  if (keyword) {{
-    alert('搜索到 ' + matchCount + ' 只匹配的股票');
-  }}
-}}
-
-function showSearchResult(results) {{
-  let div = document.getElementById('searchResult');
-  const searchBox = document.querySelector('.search-box');
-  if (!div) {{
-    div = document.createElement('div');
-    div.id = 'searchResult';
-    // 下拉框样式：紧贴搜索框下方，绝对定位
-    div.style.cssText = 'position:absolute;left:0;right:0;top:100%;margin-top:4px;border:1px solid #ddd;border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:1000;max-height:300px;overflow-y:auto;';
-    // 让搜索框相对定位
-    searchBox.style.position = 'relative';
-    searchBox.appendChild(div);
-  }}
-  if (!results.length) {{
-    div.style.display = 'none';
-    return;
-  }}
-  div.style.display = 'block';
-  let html = '';
-  results.forEach((r, idx) => {{
-    html += '<div onclick="showStockDetail(\'' + r.code + '\',\'' + r.name + '\')" style="padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background=\'#e3f2fd\'" onmouseout="this.style.background=\'\'">';
-    html += '<span><b style="color:#1a237e;">' + r.name + '</b></span>';
-    html += '<span style="color:#666;font-size:12px;background:#f5f5f5;padding:2px 8px;border-radius:4px;">' + r.code + '</span>';
-    html += '</div>';
-  }});
-  div.innerHTML = html;
-}}
-
-// 点击页面其他地方时关闭搜索结果
-document.addEventListener('click', function(e) {{
-  const searchBox = document.querySelector('.search-box');
-  const searchResult = document.getElementById('searchResult');
-  if (searchResult && !searchBox.contains(e.target)) {{
-    searchResult.style.display = 'none';
-  }}
-}});
-
-// 显示股票详细行情
-async function showStockDetail(code, name) {{
-  try {{
-    const resp = await fetch('https://qt.gtimg.cn/q=' + code);
-    const text = await resp.text();
-    const parts = text.split('~');
-    if (parts.length < 35) return;
-    const price = parseFloat(parts[3]);
-    const chg = parseFloat(parts[32]);
-    const open = parseFloat(parts[5]);
-    const high = parseFloat(parts[33]);
-    const low = parseFloat(parts[34]);
-    const prevClose = parseFloat(parts[4]);
-    const limitUp = (prevClose * 1.1).toFixed(2);
-    const limitDown = (prevClose * 0.9).toFixed(2);
-    
-    // 弹出详情
-    const chgColor = chg >= 0 ? '#c62828' : '#2e7d32';
-    const html = 
-      '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;display:flex;align-items:center;justify-content:center;">' +
-      '<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
-      '<div><h2 style="margin:0;font-size:18px;">' + name + '</h2>' +
-      '<div style="color:#666;font-size:12px;">' + code + '</div></div>' +
-      '<button onclick="closeStockDetail()" style="background:#eee;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;">×</button>' +
-      '</div>' +
-      '<div style="text-align:center;margin:20px 0;">' +
-      '<div style="font-size:36px;font-weight:bold;color:' + chgColor + ';">¥' + price.toFixed(2) + '</div>' +
-      '<div style="color:' + chgColor + ';font-size:16px;">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</div>' +
-      '</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">' +
-      '<div>今开：¥' + open.toFixed(2) + '</div>' +
-      '<div>昨收：¥' + prevClose.toFixed(2) + '</div>' +
-      '<div>最高：¥' + high.toFixed(2) + '</div>' +
-      '<div>最低：¥' + low.toFixed(2) + '</div>' +
-      '<div style="color:#c62828;">涨停：¥' + limitUp + '</div>' +
-      '<div style="color:#2e7d32;">跌停：¥' + limitDown + '</div>' +
-      '</div>' +
-      '<div style="margin-top:20px;display:flex;gap:10px;">' +
-      '<button onclick="recordTrade(\'buy\',\'' + code + '\',\'' + name + '\',' + price + ')" style="flex:1;padding:12px;background:#c62828;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录买入</button>' +
-      '<button onclick="recordTrade(\'sell\',\'' + code + '\',\'' + name + '\',' + price + ')" style="flex:1;padding:12px;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录卖出</button>' +
-      '</div>' +
-      '</div></div>';
-    
-    let div = document.getElementById('stockDetailModal');
-    if (!div) {{
-      div = document.createElement('div');
-      div.id = 'stockDetailModal';
-      document.body.appendChild(div);
-    }}
-    div.innerHTML = html;
-    div.style.display = 'block';
-  }} catch(e) {{
-    alert('获取行情失败，请重试');
-  }}
-}}
-
-function closeStockDetail() {{
-  const div = document.getElementById('stockDetailModal');
-  if (div) div.style.display = 'none';
-}}
-
-// 交易记录功能（存在手机本地）
-function getTrades() {{
-  try {{ return JSON.parse(localStorage.getItem('myTrades') || '[]'); }}
-  catch(e) {{ return []; }}
-}}
-function saveTrades(t) {{
-  localStorage.setItem('myTrades', JSON.stringify(t));
-  renderTrades();
-}}
-// 计算交易费用
-function calcFee(amount, type) {{
-  const commission = Math.max(amount * 0.00025, 5); // 佣金万2.5，最低5元
-  const transfer = amount * 0.00002; // 过户费万0.2
-  let stamp = 0;
-  if (type === 'sell') stamp = amount * 0.001; // 印花税千1，卖出收
-  return commission + transfer + stamp;
-}}
-
-function recordTrade(type, code, name, price) {{
-  const priceInput = prompt('请输入实际成交价格（元）：', price);
-  if (!priceInput || isNaN(priceInput) || priceInput <= 0) return;
-  const qtyInput = prompt('请输入数量（股），1手=100股：', '100');
-  if (!qtyInput || isNaN(qtyInput) || qtyInput <= 0) return;
-  const actualPrice = parseFloat(priceInput);
-  const qty = parseInt(qtyInput);
-  const amount = actualPrice * qty;
-  const fee = calcFee(amount, type);
-  const trades = getTrades();
-  trades.push({{
-    type: type, code: code, name: name,
-    price: actualPrice, qty: qty,
-    amount: amount, fee: fee,
-    time: new Date().toLocaleString('zh-CN')
-  }});
-  saveTrades(trades);
-  alert((type === 'buy' ? '买入' : '卖出') + '记录成功：\n' +
-    name + ' ' + qty + '股 @ ¥' + actualPrice.toFixed(2) + '\n' +
-    '成交金额：¥' + amount.toFixed(2) + '\n' +
-    '交易费用：¥' + fee.toFixed(2) + '\n' +
-    '实际支出：¥' + (amount + fee).toFixed(2));
-}}
-function renderTrades() {{
-  const trades = getTrades();
-  const list = document.getElementById('tradeList');
-  if (!trades.length) {{
-    list.innerHTML = '<div style="font-size:12px;color:#999;">还没有交易记录，点下面的按钮开始记录</div>';
-    return;
-  }}
-  // 计算持仓和盈亏
-  const positions = {{}};
-  trades.forEach(t => {{
-    if (!positions[t.code]) positions[t.code] = {{ name: t.name, buyQty: 0, buyCost: 0, sellQty: 0, sellRevenue: 0 }};
-    if (t.type === 'buy') {{ positions[t.code].buyQty += t.qty; positions[t.code].buyCost += t.price * t.qty; }}
-    else {{ positions[t.code].sellQty += t.qty; positions[t.code].sellRevenue += t.price * t.qty; }}
-  }});
-  let html = '';
-  let totalPnl = 0;
-  Object.values(positions).forEach(p => {{
-    const holdQty = p.buyQty - p.sellQty;
-    const avgCost = p.buyQty > 0 ? (p.buyCost / p.buyQty) : 0;
-    const realizedPnl = p.sellRevenue - (p.sellQty * avgCost);
-    totalPnl += realizedPnl;
-    const pnlClass = realizedPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
-    const pnlSign = realizedPnl >= 0 ? '+' : '';
-    html += '<div class="trade-item">';
-    html += '<b>' + p.name + '</b>：持仓 ' + holdQty + '股，成本 ¥' + avgCost.toFixed(2);
-    if (holdQty > 0) {{
-      const takeProfit = avgCost * 1.15;
-      const stopLoss = avgCost * 0.85;
-      html += '<div style="margin-top:4px;font-size:12px;color:#666;">';
-      html += '止盈(+15%)：<span style="color:#c62828;font-weight:bold;">¥' + takeProfit.toFixed(2) + '</span>';
-      html += ' · 止损(-15%)：<span style="color:#2e7d32;font-weight:bold;">¥' + stopLoss.toFixed(2) + '</span>';
-      html += '</div>';
-    }}
-    if (p.sellQty > 0) html += '，已实现盈亏 <span class="' + pnlClass + '">' + pnlSign + '¥' + realizedPnl.toFixed(2) + '</span>';
-    html += '</div>';
-  }});
-  // 总盈亏
-  const totalClass = totalPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
-  const totalSign = totalPnl >= 0 ? '+' : '';
-  html += '<div style="margin-top:6px;padding:6px;background:#f5f5f5;border-radius:6px;font-size:13px;">';
-  html += '总已实现盈亏：<span class="' + totalClass + '"><b>' + totalSign + '¥' + totalPnl.toFixed(2) + '</b></span>';
-  html += '</div>';
-  // 最近5条明细
-  html += '<div style="margin-top:6px;font-size:11px;color:#888;">最近记录：</div>';
-  trades.slice(-5).reverse().forEach(t => {{
-    html += '<div class="trade-item">' + t.time + ' ' + (t.type === 'buy' ? '买入' : '卖出') + ' ' + t.name + ' ' + t.qty + '股 @ ¥' + t.price.toFixed(2) + '</div>';
-  }});
-  list.innerHTML = html;
-}}
-renderTrades();
-
-// 可用资金（可自由修改）
-function getBudget() {{
-  const saved = localStorage.getItem('myBudget');
-  return saved ? parseFloat(saved) : {BUDGET};
-}}
-function setBudget(v) {{
-  localStorage.setItem('myBudget', v);
-  renderBudget();
-}}
-function renderBudget() {{
-  const b = getBudget();
-  document.querySelectorAll('.w-total b').forEach(el => el.textContent = '¥' + b.toFixed(2));
-}}
-function editBudget() {{
-  const v = prompt('请输入可用资金（元）：', getBudget());
-  if (!v || isNaN(v) || v <= 0) return;
-  setBudget(parseFloat(v));
-  alert('资金已更新：¥' + parseFloat(v).toFixed(2));
-}}
-renderBudget();
-
-// 实时行情刷新（JSONP方式，绕过CORS）
-const stockCodes = [{','.join(f"'{r['code']}'" for r in out)}];
-
-function refreshRealtime() {{
-  // 用JSONP方式加载腾讯行情API
-  const codes = stockCodes.join(',');
-  const script = document.createElement('script');
-  script.src = 'https://qt.gtimg.cn/q=' + codes;
-  script.onload = () => {{
-    try {{
-      // 解析所有股票的实时数据
-      stockCodes.forEach(code => {{
-        const varName = 'v_' + code;
-        if (typeof window[varName] === 'undefined') return;
-        const data = window[varName];
-        if (!data || typeof data !== 'string') return;
-        const parts = data.split('~');
-        if (parts.length < 35) return;
-        
-        const price = parseFloat(parts[3]);
-        const prevClose = parseFloat(parts[4]);
-        const chg = parseFloat(parts[32]);
-        
-        if (!price || isNaN(price)) return;
-        
-        // 更新价格显示
-        const priceEls = document.querySelectorAll('.price');
-        priceEls.forEach(el => {{
-          if (el.dataset.code === code) {{
-            el.textContent = '¥' + price.toFixed(2);
-          }}
-        }});
-        // 更新涨跌幅
-        const chgEls = document.querySelectorAll('.chg');
-        chgEls.forEach(el => {{
-          if (el.dataset.code === code) {{
-            el.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
-            el.style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
-          }}
-        }});
-      }});
-      // 更新盈亏
-      renderFloatingPnl();
-    }} catch(e) {{
-      console.log('实时数据解析失败', e);
-    }}
-    document.body.removeChild(script);
-  }};
-  script.onerror = () => {{
-    console.log('实时数据请求失败');
-    document.body.removeChild(script);
-  }};
-  document.body.appendChild(script);
-}}
-
-// 浮动盈亏计算
-function renderFloatingPnl() {{
-  const trades = getTrades();
-  if (!trades.length) return;
-  const positions = {{}};
-  trades.forEach(t => {{
-    if (!positions[t.code]) positions[t.code] = {{ name: t.name, buyQty: 0, buyCost: 0, sellQty: 0, sellRevenue: 0 }};
-    if (t.type === 'buy') {{ positions[t.code].buyQty += t.qty; positions[t.code].buyCost += t.price * t.qty; }}
-    else {{ positions[t.code].sellQty += t.qty; positions[t.code].sellRevenue += t.price * t.qty; }}
-  }});
-  // 找当前浮动盈亏显示区域
-  const list = document.getElementById('tradeList');
-  if (!list) return;
-  // 在已实现盈亏后面加上浮动盈亏
-  const floatingDiv = document.getElementById('floatingPnl');
-  if (floatingDiv) floatingDiv.remove();
-  let totalFloating = 0;
-  let html = '';
-  Object.values(positions).forEach(p => {{
-    const holdQty = p.buyQty - p.sellQty;
-    if (holdQty <= 0) return;
-    const avgCost = p.buyCost / p.buyQty;
-    // 找当前价格
-    const priceEl = document.querySelector(`.price[data-code="${{p.code}}"]`);
-    const curPrice = priceEl ? parseFloat(priceEl.textContent.replace('¥', '')) : avgCost;
-    const floatingPnl = (curPrice - avgCost) * holdQty;
-    totalFloating += floatingPnl;
-    const cls = floatingPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
-    const sign = floatingPnl >= 0 ? '+' : '';
-    html += '<div class="trade-item">' + p.name + ' 浮动盈亏：<span class="' + cls + '">' + sign + '¥' + floatingPnl.toFixed(2) + '</span>';
-    // 止盈止损提醒
-    const takeProfit = avgCost * 1.15;
-    const stopLoss = avgCost * 0.85;
-    if (curPrice >= takeProfit) {{
-      html += ' <span style="background:#ffeb3b;color:#000;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:bold;">⚠ 已达止盈</span>';
-    }} else if (curPrice <= stopLoss) {{
-      html += ' <span style="background:#ff5722;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:bold;">⚠ 已达止损</span>';
-    }}
-    html += '</div>';
-  }});
-  if (html) {{
-    const div = document.createElement('div');
-    div.id = 'floatingPnl';
-    const totalCls = totalFloating >= 0 ? 'pnl-pos' : 'pnl-neg';
-    const totalSign = totalFloating >= 0 ? '+' : '';
-    div.innerHTML = '<div style="margin-top:6px;padding:6px;background:#e8eaf6;border-radius:6px;font-size:13px;">' +
-      '总浮动盈亏：<span class="' + totalCls + '"><b>' + totalSign + '¥' + totalFloating.toFixed(2) + '</b></span></div>' +
-      html;
-    list.appendChild(div);
-  }}
-}}
-
-// 每5秒刷新一次（秒级实时更新）
-setInterval(refreshRealtime, 5000);
-// 页面加载后先刷新一次
-setTimeout(refreshRealtime, 1000);
-
-// K线图功能
-function toggleChart(chartId) {{
-  const chart = document.getElementById(chartId);
-  if (chart.style.display === 'none') {{
-    chart.style.display = 'block';
-    const code = chartId.replace('chart_', '');
-    drawKLine(code);
-  }} else {{
-    chart.style.display = 'none';
-  }}
-}}
-
-function drawKLine(code) {{
-  const canvas = document.getElementById('canvas_' + code);
-  const dataEl = document.getElementById('data_' + code);
-  if (!canvas || !dataEl) return;
-  let data;
-  try {{ data = JSON.parse(dataEl.textContent); }} catch(e) {{ return; }}
-  if (!data || data.length === 0) return;
-
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  const h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
-
-  // 找最高最低价
-  let maxPrice = 0, minPrice = 9999;
-  data.forEach(d => {{
-    if (d.high && d.high > maxPrice) maxPrice = d.high;
-    if (d.low && d.low < minPrice) minPrice = d.low;
-  }});
-  const range = maxPrice - minPrice || 1;
-  const padding = 10;
-  const chartH = h - padding * 2;
-  const chartW = w - padding * 2;
-  const barWidth = chartW / data.length * 0.6;
-
-  // 画K线
-  data.forEach((d, i) => {{
-    const x = padding + (chartW / data.length) * i + (chartW / data.length - barWidth) / 2;
-    const yOpen = padding + chartH * (1 - (d.open - minPrice) / range);
-    const yClose = padding + chartH * (1 - (d.close - minPrice) / range);
-    const yHigh = padding + chartH * (1 - (d.high - minPrice) / range);
-    const yLow = padding + chartH * (1 - (d.low - minPrice) / range);
-
-    // 红涨绿跌
-    const color = d.close >= d.open ? '#d32f2f' : '#2e7d32';
-    ctx.fillStyle = color;
-    ctx.strokeStyle = color;
-
-    // 上下影线
-    ctx.beginPath();
-    ctx.moveTo(x + barWidth / 2, yHigh);
-    ctx.lineTo(x + barWidth / 2, yLow);
-    ctx.stroke();
-
-    // 实体
-    const yTop = Math.min(yOpen, yClose);
-    const barH = Math.max(Math.abs(yClose - yOpen), 1);
-    ctx.fillRect(x, yTop, barWidth, barH);
-  }});
-
-  // 画价格标签
-  ctx.fillStyle = '#666';
-  ctx.font = '10px sans-serif';
-  ctx.fillText(maxPrice.toFixed(2), 5, padding + 8);
-  ctx.fillText(minPrice.toFixed(2), 5, h - padding);
-}}
 </script>
 </body></html>"""
 
