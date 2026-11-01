@@ -39,8 +39,8 @@ jobs:
           cp -r icons _site/icons
       - name: 配置 Pages
         uses: actions/configure-pages@v5
-          with:
-                  enablement: true
+        with:
+          enablement: true
       - name: 上传网页
         uses: actions/upload-pages-artifact@v3
         with:
