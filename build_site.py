@@ -471,6 +471,19 @@ html_doc = f"""<!DOCTYPE html>
   </div>
 </div>
 
+<!-- 醒目的风险预判提示 -->
+<div style="margin:14px 0;padding:14px;background:linear-gradient(135deg,#ff5252,#d32f2f);border-radius:12px;color:#fff;box-shadow:0 4px 12px rgba(211,47,47,0.3);">
+  <div style="font-size:16px;font-weight:bold;margin-bottom:8px;">⚠️ 风险预判提示</div>
+  <div style="font-size:13px;line-height:1.8;opacity:0.95;">
+    <b>建议：</b>
+    ① 单只股票仓位不超过总资金30%，别把鸡蛋放一个篮子<br>
+    ② 严格止损，亏损超过10%果断离场<br>
+    ③ 涨得太多的股票别追高，等回踩再考虑<br>
+    ④ 新手先用1000元练手，熟悉了再加仓<br>
+    ⑤ 本APP仅作数据参考，不构成投资建议
+  </div>
+</div>
+
 <!-- 新手引导（3步） -->
 <div class="tip" style="background:#e3f2fd;border-left:4px solid #1976d2;">
   <b>📱 新手3步上手：</b><br>
@@ -614,7 +627,7 @@ function fetchMarketIndex() {{
   document.body.appendChild(script);
 }}
 fetchMarketIndex();
-setInterval(fetchMarketIndex, 10000); // 每10秒刷新一次
+setInterval(fetchMarketIndex, 5000); // 每5秒刷新一次大盘指数
 
 // JSONP辅助函数（绕过CORS跨域限制）
 function jsonp(url, callbackName) {{
@@ -636,32 +649,40 @@ function jsonp(url, callbackName) {{
   }});
 }}
 
-// 搜索股票功能（从当前页面股票列表过滤）
+// 搜索股票功能（弹出窗口显示结果）
 function searchStocks() {{
   const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
   
   // 从当前页面的股票卡片搜索
   const cards = document.querySelectorAll('#stockCards .card');
-  let matchCount = 0;
+  const results = [];
   cards.forEach(card => {{
     const name = card.querySelector('.name')?.textContent.toLowerCase() || '';
     const code = card.querySelector('.code')?.textContent.toLowerCase() || '';
-    if (!keyword || name.includes(keyword) || code.includes(keyword)) {{
-      card.style.display = '';
-      matchCount++;
-    }} else {{
-      card.style.display = 'none';
+    const price = card.querySelector('.price')?.textContent || '';
+    const chg = card.querySelector('.chg')?.textContent || '';
+    if (name.includes(keyword) || code.includes(keyword)) {{
+      results.push({{name: name, code: code, price: price, chg: chg}});
     }}
   }});
   
-  // 隐藏搜索结果下拉框
-  const searchResult = document.getElementById('searchResult');
-  if (searchResult) searchResult.style.display = 'none';
-  
-  // 提示搜索结果数量
-  if (keyword) {{
-    alert('搜索到 ' + matchCount + ' 只匹配的股票');
+  // 弹出搜索结果窗口
+  let html = '<div style="padding:20px;">';
+  html += '<div style="font-size:18px;font-weight:bold;margin-bottom:15px;">🔍 搜索结果（' + results.length + '只）</div>';
+  if (results.length === 0) {{
+    html += '<div style="color:#999;text-align:center;padding:30px;">未找到匹配的股票</div>';
+  }} else {{
+    results.forEach(r => {{
+      html += '<div style="padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">';
+      html += '<div><b style="color:#1a237e;">' + r.name + '</b> <span style="color:#666;font-size:12px;">' + r.code + '</span></div>';
+      html += '<div style="text-align:right;"><div>' + r.price + '</div><div style="font-size:12px;">' + r.chg + '</div></div>';
+      html += '</div>';
+    }});
   }}
+  html += '</div>';
+  
+  // 用alert弹出（简单直接）
+  alert('搜索到 ' + results.length + ' 只匹配的股票\n\n' + results.map(r => r.name + ' ' + r.code + ' ' + r.price + ' ' + r.chg).join('\n'));
 }}
 
 function showSearchResult(results) {{
@@ -983,7 +1004,7 @@ function renderFloatingPnl() {{
 }}
 
 // 每5秒刷新一次（秒级实时更新）
-setInterval(refreshRealtime, 5000);
+setInterval(refreshRealtime, 3000); // 每3秒刷新实时行情
 // 页面加载后先刷新一次
 setTimeout(refreshRealtime, 1000);
 
