@@ -145,6 +145,35 @@ def calc_trade(code, price):
         # 买入前确认清单
         confirm = (f"买前确认：①资金够买1手 ②券商挂限价单，填在{buy_low}~{buy_high}元区间 "
                    f"③同时设好止损单{stop}元 ④每次只买1手、不满仓")
+
+        # ===== 24小时走向预判 =====
+        # 基于均线趋势、价格位置、近期动量综合判断
+        recent_5d_chg = ((close.iloc[-1] - close.iloc[-6]) / close.iloc[-6] * 100) if len(close) >= 6 else 0
+        avg_daily_range = ((high.tail(20) - low.tail(20)) / close.tail(20)).mean() * 100 if len(close) >= 20 else 2.0
+        ma_trend = "up" if ma5 > ma20 else "down"
+        price_vs_ma5 = (price - ma5) / ma5 * 100 if ma5 > 0 else 0
+
+        if ma_trend == "up" and price_vs_ma5 > 0 and recent_5d_chg > 0:
+            trend = "看多"
+            trend_reason = f"均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨{recent_5d_chg:.1f}%"
+            confidence = "高"
+        elif ma_trend == "down" and price_vs_ma5 < 0 and recent_5d_chg < 0:
+            trend = "看空"
+            trend_reason = f"均线空头排列(MA5<MA20)，价格在MA5下方，近5日跌{abs(recent_5d_chg):.1f}%"
+            confidence = "高"
+        elif ma_trend == "up":
+            trend = "偏多震荡"
+            trend_reason = f"均线向上但价格回踩MA5，近5日涨跌{recent_5d_chg:+.1f}%，需观察能否企稳"
+            confidence = "中"
+        else:
+            trend = "偏空震荡"
+            trend_reason = f"均线向下但价格反弹至MA5附近，近5日涨跌{recent_5d_chg:+.1f}%，反弹力度待确认"
+            confidence = "中"
+
+        # 预期波动区间（基于近20天平均日波动）
+        expect_up = round(price * (1 + avg_daily_range / 100), 2)
+        expect_down = round(price * (1 - avg_daily_range / 100), 2)
+
         return {
             "state": state, "advice": advice,
             "buy_ref": round(price, 2), "stop_loss": stop, "take_profit": take,
@@ -154,6 +183,9 @@ def calc_trade(code, price):
             "risk_note": risk_note, "confirm": confirm,
             "kline": kline_data,
             "limit_up": limit_up, "limit_down": limit_down,
+            "trend_24h": trend, "trend_reason": trend_reason,
+            "expect_up": expect_up, "expect_down": expect_down,
+            "trend_confidence": confidence,
         }
     except Exception:
         return fallback
@@ -317,6 +349,14 @@ for r in out:
     stop = f"¥{t['stop_loss']:.2f}" if t.get("stop_loss") else "--"
     take = f"¥{t['take_profit']:.2f}" if t.get("take_profit") else "--"
     risk_html = f'<div class="t-risk">⚠ {esc(t["risk_note"])}</div>' if t.get("risk_note") else ""
+    # 24小时预判颜色
+    trend = t.get("trend_24h", "")
+    if "看多" in trend:
+        trend_bg, trend_border, trend_color = "#ffebee", "#c62828", "#c62828"
+    elif "看空" in trend:
+        trend_bg, trend_border, trend_color = "#e8f5e9", "#2e7d32", "#2e7d32"
+    else:
+        trend_bg, trend_border, trend_color = "#fff8e1", "#f9a825", "#f57f17"
     cards += f"""
     <div class="card">
       <div class="card-top">
@@ -331,6 +371,11 @@ for r in out:
       <div class="limit-row">
         <span class="limit-up">涨停 ¥{t.get('limit_up', '--')}</span>
         <span class="limit-down">跌停 ¥{t.get('limit_down', '--')}</span>
+      </div>
+      <div class="trend-row" style="margin:6px 0;padding:6px 10px;border-radius:6px;background:{trend_bg};border-left:3px solid {trend_border};">
+        <div style="font-size:13px;font-weight:600;color:{trend_color};">📊 24小时预判：{esc(t.get('trend_24h', '--'))} <span style="font-size:11px;font-weight:400;color:#666;">（置信度：{esc(t.get('trend_confidence', '--'))}）</span></div>
+        <div style="font-size:11px;color:#555;margin-top:2px;">预期区间 ¥{t.get('expect_down', '--')} ~ ¥{t.get('expect_up', '--')}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px;">{esc(t.get('trend_reason', ''))}</div>
       </div>
       <div class="tags">
         <span class="tag" style="color:{color(r['chg5'])}">{chg5}</span>
@@ -367,7 +412,7 @@ for item in WALLET_LEDGER[-5:][::-1]:
 wallet_html = f"""
 <div class="card wallet">
   <div class="card-top"><div class="name">资金账户</div>
-    <div class="w-total">当前可用 <b>¥{BUDGET:.2f}</b> <button onclick="editBudget()" style="margin-left:8px;font-size:12px;padding:3px 10px;background:#1a237e;color:#fff;border:none;border-radius:4px;cursor:pointer;">编辑</button></div></div>
+    <div class="w-total">当前可用 <b onclick="editBudget()" style="cursor:pointer;text-decoration:underline;color:#1a237e;" title="点击编辑">¥{BUDGET:.2f}</b> <button onclick="editBudget()" style="margin-left:8px;font-size:12px;padding:3px 10px;background:#1a237e;color:#fff;border:none;border-radius:4px;cursor:pointer;">编辑</button></div></div>
   <div class="w-rows">{wallet_rows}</div>
   <div class="w-hint">点"编辑"可直接修改可用资金，数据保存在本地。</div>
   <div class="trades">
