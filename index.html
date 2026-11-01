@@ -195,9 +195,10 @@
   <div style="font-size:11px;opacity:0.8;text-align:center;margin-top:6px;">⚠️ 涨停预测仅供参考，实际走势受多种因素影响，注意风险</div>
 </div>
 
-<div class="search-box">
-  <input type="text" id="searchInput" placeholder="输入股票代码或名称..." onkeydown="if(event.key==='Enter')searchStocks()">
+<div class="search-box" style="position:relative;">
+  <input type="text" id="searchInput" placeholder="输入股票代码/名称，全网搜索..." onkeydown="if(event.key==='Enter')searchStocks()">
   <button onclick="searchStocks()">🔍 搜索</button>
+  <div id="searchResult" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;border:1px solid #ddd;border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1000;max-height:300px;overflow-y:auto;"></div>
 </div>
 <div class="stat">
   <div><b>20</b><span>今日候选</span></div>
@@ -1235,57 +1236,65 @@ function jsonp(url, callbackName) {
 
 // 搜索股票功能（从当前页面股票列表过滤）
 function searchStocks() {
-  const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-  
-  // 从当前页面的股票卡片搜索
-  const cards = document.querySelectorAll('#stockCards .card');
-  let matchCount = 0;
-  cards.forEach(card => {
-    const name = card.querySelector('.name')?.textContent.toLowerCase() || '';
-    const code = card.querySelector('.code')?.textContent.toLowerCase() || '';
-    if (!keyword || name.includes(keyword) || code.includes(keyword)) {
-      card.style.display = '';
-      matchCount++;
-    } else {
-      card.style.display = 'none';
+  const keyword = document.getElementById('searchInput').value.trim();
+  if (!keyword) return;
+  // 用JSONP方式调腾讯smartbox搜索全网股票
+  const cbName = 'searchCb_' + Date.now();
+  window[cbName] = function(data) {
+    try {
+      const div = document.getElementById('searchResult');
+      if (!data || !data.length) {
+        div.innerHTML = '<div style="padding:14px;color:#999;font-size:13px;">未找到匹配股票</div>';
+        div.style.display = 'block';
+        return;
+      }
+      let html = '';
+      data.forEach(r => {
+        // r格式: {code, name}
+        html += '<div onclick="closeSearch();showStockDetail(\'' + r.code + '\',\'' + r.name + '\')" style="padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background=\'#e3f2fd\'" onmouseout="this.style.background=\'\'">';
+        html += '<span><b style="color:#1a237e;">' + r.name + '</b></span>';
+        html += '<span style="color:#666;font-size:12px;background:#f5f5f5;padding:2px 8px;border-radius:4px;">' + r.code + '</span>';
+        html += '</div>';
+      });
+      div.innerHTML = html;
+      div.style.display = 'block';
+    } finally {
+      delete window[cbName];
+      const s = document.getElementById(cbName);
+      if (s) s.remove();
     }
-  });
-  
-  // 隐藏搜索结果下拉框
-  const searchResult = document.getElementById('searchResult');
-  if (searchResult) searchResult.style.display = 'none';
-  
-  // 提示搜索结果数量
-  if (keyword) {
-    alert('搜索到 ' + matchCount + ' 只匹配的股票');
-  }
+  };
+  // 腾讯搜索API: https://smartbox.gtimg.cn/s3/?v=2&q=关键词&t=all
+  const script = document.createElement('script');
+  script.id = cbName;
+  script.src = 'https://smartbox.gtimg.cn/s3/?v=2&q=' + encodeURIComponent(keyword) + '&t=all&callback=' + cbName;
+  script.onerror = function() {
+    // 腾讯搜索不支持callback参数，直接解析全局变量
+    try {
+      const raw = window.v_hint || '';
+      const div = document.getElementById('searchResult');
+      if (!raw) {
+        div.innerHTML = '<div style="padding:14px;color:#999;font-size:13px;">搜索失败，请重试</div>';
+        div.style.display = 'block';
+        return;
+      }
+      const results = [];
+      raw.split('^').forEach(item => {
+        const parts = item.split('~');
+        if (parts.length >= 3 && parts[4] && parts[4].indexOf('GP') === 0) {
+          results.push({ code: parts[0] + parts[1], name: parts[2] });
+        }
+      });
+      window[cbName](results);
+    } catch(e) { console.log('搜索解析失败', e); }
+    script.remove();
+  };
+  document.body.appendChild(script);
 }
 
-function showSearchResult(results) {
-  let div = document.getElementById('searchResult');
-  const searchBox = document.querySelector('.search-box');
-  if (!div) {
-    div = document.createElement('div');
-    div.id = 'searchResult';
-    // 下拉框样式：紧贴搜索框下方，绝对定位
-    div.style.cssText = 'position:absolute;left:0;right:0;top:100%;margin-top:4px;border:1px solid #ddd;border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:1000;max-height:300px;overflow-y:auto;';
-    // 让搜索框相对定位
-    searchBox.style.position = 'relative';
-    searchBox.appendChild(div);
-  }
-  if (!results.length) {
-    div.style.display = 'none';
-    return;
-  }
-  div.style.display = 'block';
-  let html = '';
-  results.forEach((r, idx) => {
-    html += '<div onclick="showStockDetail('' + r.code + '','' + r.name + '')" style="padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background=''">';
-    html += '<span><b style="color:#1a237e;">' + r.name + '</b></span>';
-    html += '<span style="color:#666;font-size:12px;background:#f5f5f5;padding:2px 8px;border-radius:4px;">' + r.code + '</span>';
-    html += '</div>';
-  });
-  div.innerHTML = html;
+function closeSearch() {
+  const div = document.getElementById('searchResult');
+  if (div) div.style.display = 'none';
 }
 
 // 点击页面其他地方时关闭搜索结果
@@ -1297,61 +1306,140 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// 显示股票详细行情
-async function showStockDetail(code, name) {
-  try {
-    const resp = await fetch('https://qt.gtimg.cn/q=' + code);
-    const text = await resp.text();
-    const parts = text.split('~');
-    if (parts.length < 35) return;
-    const price = parseFloat(parts[3]);
-    const chg = parseFloat(parts[32]);
-    const open = parseFloat(parts[5]);
-    const high = parseFloat(parts[33]);
-    const low = parseFloat(parts[34]);
-    const prevClose = parseFloat(parts[4]);
-    const limitUp = (prevClose * 1.1).toFixed(2);
-    const limitDown = (prevClose * 0.9).toFixed(2);
-    
-    // 弹出详情
-    const chgColor = chg >= 0 ? '#c62828' : '#2e7d32';
-    const html = 
-      '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;display:flex;align-items:center;justify-content:center;">' +
-      '<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
-      '<div><h2 style="margin:0;font-size:18px;">' + name + '</h2>' +
-      '<div style="color:#666;font-size:12px;">' + code + '</div></div>' +
-      '<button onclick="closeStockDetail()" style="background:#eee;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;">×</button>' +
-      '</div>' +
-      '<div style="text-align:center;margin:20px 0;">' +
-      '<div style="font-size:36px;font-weight:bold;color:' + chgColor + ';">¥' + price.toFixed(2) + '</div>' +
-      '<div style="color:' + chgColor + ';font-size:16px;">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</div>' +
-      '</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">' +
-      '<div>今开：¥' + open.toFixed(2) + '</div>' +
-      '<div>昨收：¥' + prevClose.toFixed(2) + '</div>' +
-      '<div>最高：¥' + high.toFixed(2) + '</div>' +
-      '<div>最低：¥' + low.toFixed(2) + '</div>' +
-      '<div style="color:#c62828;">涨停：¥' + limitUp + '</div>' +
-      '<div style="color:#2e7d32;">跌停：¥' + limitDown + '</div>' +
-      '</div>' +
-      '<div style="margin-top:20px;display:flex;gap:10px;">' +
-      '<button onclick="recordTrade('buy','' + code + '','' + name + '',' + price + ')" style="flex:1;padding:12px;background:#c62828;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录买入</button>' +
-      '<button onclick="recordTrade('sell','' + code + '','' + name + '',' + price + ')" style="flex:1;padding:12px;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录卖出</button>' +
-      '</div>' +
-      '</div></div>';
-    
-    let div = document.getElementById('stockDetailModal');
-    if (!div) {
-      div = document.createElement('div');
-      div.id = 'stockDetailModal';
-      document.body.appendChild(div);
+// 显示股票详细行情（JSONP方式获取行情）
+function showStockDetail(code, name) {
+  closeSearch();
+  const cbName = 'detailCb_' + Date.now();
+  window[cbName] = function() {
+    try {
+      const varName = 'v_' + code;
+      const data = window[varName];
+      if (!data || typeof data !== 'string') {
+        alert('获取行情失败，请重试');
+        return;
+      }
+      const parts = data.split('~');
+      if (parts.length < 35) return;
+      const price = parseFloat(parts[3]);
+      const chg = parseFloat(parts[32]);
+      const open = parseFloat(parts[5]);
+      const high = parseFloat(parts[33]);
+      const low = parseFloat(parts[34]);
+      const prevClose = parseFloat(parts[4]);
+      const limitUp = (prevClose * 1.1).toFixed(2);
+      const limitDown = (prevClose * 0.9).toFixed(2);
+      
+      const chgColor = chg >= 0 ? '#c62828' : '#2e7d32';
+      const budget = getBudget();
+      const maxQty = Math.floor(budget / price / 100) * 100;
+      const canBuy = maxQty >= 100;
+      
+      const html = 
+        '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;display:flex;align-items:center;justify-content:center;">' +
+        '<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+        '<div><h2 style="margin:0;font-size:18px;">' + name + '</h2>' +
+        '<div style="color:#666;font-size:12px;">' + code + '</div></div>' +
+        '<button onclick="closeStockDetail()" style="background:#eee;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;">×</button>' +
+        '</div>' +
+        '<div style="text-align:center;margin:20px 0;">' +
+        '<div style="font-size:36px;font-weight:bold;color:' + chgColor + ';">¥' + price.toFixed(2) + '</div>' +
+        '<div style="color:' + chgColor + ';font-size:16px;">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">' +
+        '<div>今开：¥' + open.toFixed(2) + '</div>' +
+        '<div>昨收：¥' + prevClose.toFixed(2) + '</div>' +
+        '<div>最高：¥' + high.toFixed(2) + '</div>' +
+        '<div>最低：¥' + low.toFixed(2) + '</div>' +
+        '<div style="color:#c62828;">涨停：¥' + limitUp + '</div>' +
+        '<div style="color:#2e7d32;">跌停：¥' + limitDown + '</div>' +
+        '</div>' +
+        // 可用资金提示
+        '<div style="margin-top:16px;padding:10px;background:#e8eaf6;border-radius:8px;font-size:13px;text-align:center;">' +
+        '可用资金：<b>¥' + budget.toFixed(2) + '</b> · 当前价可买：<b>' + (canBuy ? maxQty + '股' : '资金不足') + '</b>' +
+        '</div>' +
+        '<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button onclick="buyWithBudget(\'' + code + '\',\'' + name + '\',' + price + ')" style="flex:1;padding:12px;background:#c62828;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;' + (canBuy ? '' : 'opacity:0.5;') + '">⚡一键模拟买入</button>' +
+        '<button onclick="recordTrade(\'buy\',\'' + code + '\',\'' + name + '\',' + price + ')" style="flex:1;padding:12px;background:#ff7043;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录买入</button>' +
+        '</div>' +
+        '<div style="margin-top:8px;display:flex;gap:8px;">' +
+        '<button onclick="recordTrade(\'sell\',\'' + code + '\',\'' + name + '\',' + price + ')" style="flex:1;padding:12px;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录卖出</button>' +
+        '</div>' +
+        '<div style="margin-top:12px;font-size:11px;color:#999;text-align:center;">⚠️ 模拟交易仅记录在本地，不连接券商，不构成投资建议</div>' +
+        '</div></div>';
+      
+      let div = document.getElementById('stockDetailModal');
+      if (!div) {
+        div = document.createElement('div');
+        div.id = 'stockDetailModal';
+        document.body.appendChild(div);
+      }
+      div.innerHTML = html;
+      div.style.display = 'block';
+    } catch(e) {
+      console.log('详情解析失败', e);
+      alert('获取行情失败，请重试');
+    } finally {
+      delete window[cbName];
+      const s = document.getElementById(cbName);
+      if (s) s.remove();
     }
-    div.innerHTML = html;
-    div.style.display = 'block';
-  } catch(e) {
-    alert('获取行情失败，请重试');
+  };
+  const script = document.createElement('script');
+  script.id = cbName;
+  script.src = 'https://qt.gtimg.cn/q=' + code + '&callback=' + cbName;
+  script.onerror = function() {
+    // 腾讯行情不支持callback，直接解析全局变量
+    try { window[cbName](); } catch(e) { alert('获取行情失败'); }
+    script.remove();
+  };
+  document.body.appendChild(script);
+}
+
+// 一键模拟买入：按可用资金自动计算可买股数，直接扣减资金
+function buyWithBudget(code, name, price) {
+  const budget = getBudget();
+  const maxQty = Math.floor(budget / price / 100) * 100;
+  if (maxQty < 100) {
+    alert('可用资金不足！\n可用资金：¥' + budget.toFixed(2) + '\n当前价：¥' + price.toFixed(2) + '\n买1手(100股)需要：¥' + (price * 100).toFixed(2));
+    return;
   }
+  const amount = price * maxQty;
+  const fee = calcFee(amount, 'buy');
+  const totalCost = amount + fee;
+  
+  if (totalCost > budget) {
+    // 减少1手再试
+    const qty2 = maxQty - 100;
+    if (qty2 < 100) {
+      alert('交易费用后资金不足，请调整');
+      return;
+    }
+    return buyWithBudget(code, name, price);
+  }
+  
+  const trades = getTrades();
+  trades.push({
+    type: 'buy', code: code, name: name,
+    price: price, qty: maxQty,
+    amount: amount, fee: fee,
+    time: new Date().toLocaleString('zh-CN'),
+    auto: true
+  });
+  saveTrades(trades);
+  
+  // 扣减可用资金
+  const newBudget = budget - totalCost;
+  setBudget(newBudget);
+  
+  alert('⚡ 模拟买入成功！\n' +
+    name + ' ' + maxQty + '股 @ ¥' + price.toFixed(2) + '\n' +
+    '成交金额：¥' + amount.toFixed(2) + '\n' +
+    '交易费用：¥' + fee.toFixed(2) + '\n' +
+    '实际支出：¥' + totalCost.toFixed(2) + '\n' +
+    '剩余资金：¥' + newBudget.toFixed(2));
+  
+  closeStockDetail();
 }
 
 function closeStockDetail() {
@@ -1394,14 +1482,10 @@ function recordTrade(type, code, name, price) {
     time: new Date().toLocaleString('zh-CN')
   });
   saveTrades(trades);
-  alert((type === 'buy' ? '买入' : '卖出') + '记录成功：
-' +
-    name + ' ' + qty + '股 @ ¥' + actualPrice.toFixed(2) + '
-' +
-    '成交金额：¥' + amount.toFixed(2) + '
-' +
-    '交易费用：¥' + fee.toFixed(2) + '
-' +
+  alert((type === 'buy' ? '买入' : '卖出') + '记录成功：\n' +
+    name + ' ' + qty + '股 @ ¥' + actualPrice.toFixed(2) + '\n' +
+    '成交金额：¥' + amount.toFixed(2) + '\n' +
+    '交易费用：¥' + fee.toFixed(2) + '\n' +
     '实际支出：¥' + (amount + fee).toFixed(2));
 }
 function renderTrades() {
