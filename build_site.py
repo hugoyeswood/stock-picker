@@ -552,9 +552,6 @@ html_doc = f"""<!DOCTYPE html>
 <script>
 if ('serviceWorker' in navigator) {{ navigator.serviceWorker.register('./service-worker.js'); }}
 
-// 全A股股票列表（后端生成时嵌入）
-const allStocks = {json.dumps(all_stocks, ensure_ascii=False)};
-
 // 清空所有数据
 function clearAllData() {{
   if (!confirm('确定要清空所有交易记录和资金设置吗？此操作不可恢复！')) return;
