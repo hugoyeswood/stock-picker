@@ -455,6 +455,22 @@ html_doc = f"""<!DOCTYPE html>
 <h1>今日候选清单</h1>
 <div class="sub">数据更新于 {now} · 当前时间：<span id="currentTime"></span> · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f}</div>
 
+<!-- 大盘指数 -->
+<div style="margin:10px 0;padding:10px;background:#f5f5f5;border-radius:8px;display:flex;justify-content:space-around;text-align:center;">
+  <div>
+    <div style="font-size:12px;color:#666;">上证指数</div>
+    <div id="shIndex" style="font-size:16px;font-weight:bold;">--</div>
+  </div>
+  <div>
+    <div style="font-size:12px;color:#666;">深证成指</div>
+    <div id="szIndex" style="font-size:16px;font-weight:bold;">--</div>
+  </div>
+  <div>
+    <div style="font-size:12px;color:#666;">创业板指</div>
+    <div id="cyIndex" style="font-size:16px;font-weight:bold;">--</div>
+  </div>
+</div>
+
 <!-- 新手引导（3步） -->
 <div class="tip" style="background:#e3f2fd;border-left:4px solid #1976d2;">
   <b>📱 新手3步上手：</b><br>
@@ -550,6 +566,55 @@ function updateCurrentTime() {{
 }}
 updateCurrentTime();
 setInterval(updateCurrentTime, 1000);
+
+// 获取大盘指数（JSONP方式）
+function fetchMarketIndex() {{
+  const script = document.createElement('script');
+  script.src = 'https://qt.gtimg.cn/q=sh000001,sz399001,sz399006';
+  script.onload = () => {{
+    try {{
+      // 上证指数
+      if (typeof v_sh000001 !== 'undefined') {{
+        const parts = v_sh000001.split('~');
+        const price = parseFloat(parts[3]);
+        const chg = parseFloat(parts[32]);
+        if (price) {{
+          document.getElementById('shIndex').textContent = price.toFixed(2);
+          document.getElementById('shIndex').style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
+        }}
+      }}
+      // 深证成指
+      if (typeof v_sz399001 !== 'undefined') {{
+        const parts = v_sz399001.split('~');
+        const price = parseFloat(parts[3]);
+        const chg = parseFloat(parts[32]);
+        if (price) {{
+          document.getElementById('szIndex').textContent = price.toFixed(2);
+          document.getElementById('szIndex').style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
+        }}
+      }}
+      // 创业板指
+      if (typeof v_sz399006 !== 'undefined') {{
+        const parts = v_sz399006.split('~');
+        const price = parseFloat(parts[3]);
+        const chg = parseFloat(parts[32]);
+        if (price) {{
+          document.getElementById('cyIndex').textContent = price.toFixed(2);
+          document.getElementById('cyIndex').style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
+        }}
+      }}
+    }} catch(e) {{
+      console.log('大盘指数解析失败', e);
+    }}
+    document.body.removeChild(script);
+  }};
+  script.onerror = () => {{
+    document.body.removeChild(script);
+  }};
+  document.body.appendChild(script);
+}}
+fetchMarketIndex();
+setInterval(fetchMarketIndex, 10000); // 每10秒刷新一次
 
 // JSONP辅助函数（绕过CORS跨域限制）
 function jsonp(url, callbackName) {{
@@ -706,6 +771,15 @@ function saveTrades(t) {{
   localStorage.setItem('myTrades', JSON.stringify(t));
   renderTrades();
 }}
+// 计算交易费用
+function calcFee(amount, type) {{
+  const commission = Math.max(amount * 0.00025, 5); // 佣金万2.5，最低5元
+  const transfer = amount * 0.00002; // 过户费万0.2
+  let stamp = 0;
+  if (type === 'sell') stamp = amount * 0.001; // 印花税千1，卖出收
+  return commission + transfer + stamp;
+}}
+
 function recordTrade(type, code, name, price) {{
   const priceInput = prompt('请输入实际成交价格（元）：', price);
   if (!priceInput || isNaN(priceInput) || priceInput <= 0) return;
@@ -713,14 +787,21 @@ function recordTrade(type, code, name, price) {{
   if (!qtyInput || isNaN(qtyInput) || qtyInput <= 0) return;
   const actualPrice = parseFloat(priceInput);
   const qty = parseInt(qtyInput);
+  const amount = actualPrice * qty;
+  const fee = calcFee(amount, type);
   const trades = getTrades();
   trades.push({{
     type: type, code: code, name: name,
     price: actualPrice, qty: qty,
+    amount: amount, fee: fee,
     time: new Date().toLocaleString('zh-CN')
   }});
   saveTrades(trades);
-  alert((type === 'buy' ? '买入' : '卖出') + '记录成功：' + name + ' ' + qty + '股 @ ¥' + actualPrice.toFixed(2));
+  alert((type === 'buy' ? '买入' : '卖出') + '记录成功：\n' +
+    name + ' ' + qty + '股 @ ¥' + actualPrice.toFixed(2) + '\n' +
+    '成交金额：¥' + amount.toFixed(2) + '\n' +
+    '交易费用：¥' + fee.toFixed(2) + '\n' +
+    '实际支出：¥' + (amount + fee).toFixed(2));
 }}
 function renderTrades() {{
   const trades = getTrades();
