@@ -391,8 +391,16 @@ html_doc = f"""<!DOCTYPE html>
 </style></head><body>
 <h1>今日候选清单</h1>
 <div class="sub">更新于 {now} · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f}</div>
-<div class="tip"><b>怎么用：</b>看卡片【状态】——"可买"按【建议买入区间】挂限价单买1手；"等回踩"别追高；"观望"先别碰。<br>
-买入后设好<b>止损</b>(跌到就走)和<b>止盈</b>(涨到落袋)。<b>提醒：</b>数据筛选，非投资建议；涨跌有风险，控制仓位。</div>
+
+<!-- 新手引导（3步） -->
+<div class="tip" style="background:#e3f2fd;border-left:4px solid #1976d2;">
+  <b>📱 新手3步上手：</b><br>
+  ① 看下面推荐的股票，"✅可买"的可以考虑买入<br>
+  ② 点"记录买入"，输入实际成交价格<br>
+  ③ 系统自动帮你盯止盈止损，到点提醒你<br>
+  <span style="color:#d32f2f;font-size:12px;">⚠️ 新手提醒：先小钱练手，别重仓！</span>
+</div>
+
 <div class="search-box">
   <input type="text" id="searchInput" placeholder="🔍 输入股票代码或名称搜索..." oninput="searchStocks()">
 </div>
@@ -405,10 +413,34 @@ html_doc = f"""<!DOCTYPE html>
 <div id="stockCards">
 {cards}
 </div>
+
+<!-- 新手常见问题 -->
+<div style="margin:20px 0;padding:14px;background:#fff3e0;border-radius:8px;">
+  <div style="font-weight:bold;margin-bottom:8px;">❓ 新手常见问题</div>
+  <div style="font-size:13px;line-height:1.8;">
+    <b>Q：怎么添加到手机桌面？</b><br>
+    A：手机浏览器打开本页 → 菜单 → "添加到主屏幕"，就像App一样用。<br><br>
+    <b>Q：交易记录存在哪？</b><br>
+    A：存在你手机本地（浏览器缓存），不会上传到服务器。<br><br>
+    <b>Q：怎么清空记录重新开始？</b><br>
+    A：点下面的"清空所有记录"按钮。<br><br>
+    <button onclick="clearAllData()" style="margin-top:8px;padding:8px 16px;background:#f44336;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🗑️ 清空所有记录</button>
+  </div>
+</div>
+
 <div class="foot">状态依据：现价 vs 20日均线、离5日均线远近；买入区间=现价与MA5之间。<br>
-资金账户：本地 python add_fund.py 转入资金后重新部署 · 添加到主屏幕即可像App一样用 · 每天收盘后自动更新</div>
+⚠️ 本工具仅为数据筛选参考，不构成投资建议。股市有风险，入市需谨慎。</div>
 <script>
 if ('serviceWorker' in navigator) {{ navigator.serviceWorker.register('./service-worker.js'); }}
+
+// 清空所有数据
+function clearAllData() {{
+  if (!confirm('确定要清空所有交易记录和资金设置吗？此操作不可恢复！')) return;
+  localStorage.removeItem('myTrades');
+  localStorage.removeItem('myBudget');
+  alert('已清空所有记录！');
+  location.reload();
+}}
 
 // 全网搜索股票功能
 let searchTimer = null;
