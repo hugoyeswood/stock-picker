@@ -641,7 +641,7 @@ function showSearchResult(results) {{
   div.style.display = 'block';
   let html = '';
   results.forEach((r, idx) => {{
-    html += '<div onclick="showStockDetail(\'' + r.code + '\',\'' + r.name + '\')" style="padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background=\'#e3f2fd\'" onmouseout="this.style.background=\'\'">';
+    html += '<div onclick="showStockDetail(\\'' + r.code + '\\',\\'' + r.name + '\\')" style="padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background=\\'#e3f2fd\\'" onmouseout="this.style.background=\\'\\'">';
     html += '<span><b style="color:#1a237e;">' + r.name + '</b></span>';
     html += '<span style="color:#666;font-size:12px;background:#f5f5f5;padding:2px 8px;border-radius:4px;">' + r.code + '</span>';
     html += '</div>';
@@ -697,8 +697,8 @@ async function showStockDetail(code, name) {{
       '<div style="color:#2e7d32;">跌停：¥' + limitDown + '</div>' +
       '</div>' +
       '<div style="margin-top:20px;display:flex;gap:10px;">' +
-      '<button onclick="recordTrade(\'buy\',\'' + code + '\',\'' + name + '\',' + price + ')" style="flex:1;padding:12px;background:#c62828;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录买入</button>' +
-      '<button onclick="recordTrade(\'sell\',\'' + code + '\',\'' + name + '\',' + price + ')" style="flex:1;padding:12px;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录卖出</button>' +
+      '<button onclick="recordTrade(\\'buy\\',\\'' + code + '\\',\\'' + name + '\\',' + price + ')" style="flex:1;padding:12px;background:#c62828;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录买入</button>' +
+      '<button onclick="recordTrade(\\'sell\\',\\'' + code + '\\',\\'' + name + '\\',' + price + ')" style="flex:1;padding:12px;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录卖出</button>' +
       '</div>' +
       '</div></div>';
     
