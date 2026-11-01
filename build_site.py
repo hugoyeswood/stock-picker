@@ -519,7 +519,27 @@ function clearAllData() {{
   location.reload();
 }}
 
-// 全网搜索股票功能
+// JSONP辅助函数（绕过CORS跨域限制）
+function jsonp(url, callbackName) {{
+  return new Promise((resolve, reject) => {{
+    const script = document.createElement('script');
+    // 创建全局回调函数
+    window[callbackName] = (data) => {{
+      resolve(data);
+      // 清理
+      delete window[callbackName];
+      document.body.removeChild(script);
+    }};
+    script.src = url;
+    script.onerror = () => {{
+      reject(new Error('JSONP请求失败'));
+      document.body.removeChild(script);
+    }};
+    document.body.appendChild(script);
+  }});
+}}
+
+// 全网搜索股票功能（用JSONP方式）
 let searchTimer = null;
 function searchStocks() {{
   const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -527,13 +547,11 @@ function searchStocks() {{
   
   // 先搜本地已加载的股票卡片
   const cards = document.querySelectorAll('#stockCards .card');
-  let localMatchCount = 0;
   cards.forEach(card => {{
     const name = card.querySelector('.name')?.textContent.toLowerCase() || '';
     const code = card.querySelector('.code')?.textContent.toLowerCase() || '';
     if (!keyword || name.includes(keyword) || code.includes(keyword)) {{
       card.style.display = '';
-      if (keyword) localMatchCount++;
     }} else {{
       card.style.display = 'none';
     }}
@@ -545,32 +563,41 @@ function searchStocks() {{
   
   if (!keyword) return;
   
-  // 同时尝试全网搜索（用多个数据源）
-  searchTimer = setTimeout(async () => {{
-    try {{
-      // 用东方财富搜索API（CORS较宽松）
-      const resp = await fetch('https://searchapi.eastmoney.com/api/suggest/get?input=' + encodeURIComponent(keyword) + '&type=14&token=D43BF722C8E33BDC906FB84D85E326E8&count=10');
-      const data = await resp.json();
-      const results = [];
-      if (data.QuotationCodeTable && data.QuotationCodeTable.Data) {{
-        data.QuotationCodeTable.Data.forEach(item => {{
-          results.push({{
-            code: (item.MktNum === '1' ? 'sh' : 'sz') + item.Code,
-            name: item.Name,
-            market: item.MktNum
+  // 用JSONP方式调用腾讯搜索API
+  searchTimer = setTimeout(() => {{
+    // 用腾讯搜索API（JSONP方式，v_hint是全局变量）
+    const script = document.createElement('script');
+    script.src = 'https://smartbox.gtimg.cn/s3/?v=2&q=' + encodeURIComponent(keyword) + '&t=all';
+    script.onload = () => {{
+      try {{
+        // 解析全局变量v_hint
+        if (typeof v_hint !== 'undefined' && v_hint) {{
+          const items = v_hint.split('^');
+          const results = [];
+          items.forEach(item => {{
+            const parts = item.split('~');
+            if (parts.length >= 4 && parts[0] && parts[1]) {{
+              results.push({{
+                code: parts[0],
+                name: parts[1],
+                market: parts[2]
+              }});
+            }}
           }});
-        }});
+          if (results.length > 0) {{
+            showSearchResult(results.slice(0, 10));
+          }}
+        }}
+      }} catch(e) {{
+        console.log('搜索解析失败', e);
       }}
-      if (results.length > 0) {{
-        showSearchResult(results);
-      }}
-    }} catch(e) {{
-      console.log('全网搜索失败', e);
-      // 搜索失败时显示本地搜索结果数量
-      if (localMatchCount === 0) {{
-        showSearchResult([{{code:'', name:'未找到匹配股票，试试输入股票代码', market:''}}]);
-      }}
-    }}
+      document.body.removeChild(script);
+    }};
+    script.onerror = () => {{
+      console.log('搜索请求失败');
+      document.body.removeChild(script);
+    }};
+    document.body.appendChild(script);
   }}, 300);
 }}
 
@@ -755,147 +782,59 @@ function editBudget() {{
 }}
 renderBudget();
 
-// 实时行情刷新（多数据源对比）
+// 实时行情刷新（JSONP方式，绕过CORS）
 const stockCodes = [{','.join(f"'{r['code']}'" for r in out)}];
 
-// 数据源状态记录
-let dataSources = {{
-  tencent: {{ ok: 0, fail: 0, lastPrice: {{}} }},
-  sina: {{ ok: 0, fail: 0, lastPrice: {{}} }},
-  eastmoney: {{ ok: 0, fail: 0, lastPrice: {{}} }}
-}};
-
-async function refreshRealtime() {{
-  // 并行调用多个数据源
-  const results = await Promise.allSettled([
-    fetchTencent(),
-    fetchSina(),
-    fetchEastmoney()
-  ]);
-  
-  // 收集所有数据源的价格
-  const allPrices = {{}};
-  results.forEach((result, idx) => {{
-    if (result.status === 'fulfilled' && result.value) {{
-      Object.entries(result.value).forEach(([code, price]) => {{
-        if (!allPrices[code]) allPrices[code] = [];
-        allPrices[code].push(price);
+function refreshRealtime() {{
+  // 用JSONP方式加载腾讯行情API
+  const codes = stockCodes.join(',');
+  const script = document.createElement('script');
+  script.src = 'https://qt.gtimg.cn/q=' + codes;
+  script.onload = () => {{
+    try {{
+      // 解析所有股票的实时数据
+      stockCodes.forEach(code => {{
+        const varName = 'v_' + code;
+        if (typeof window[varName] === 'undefined') return;
+        const data = window[varName];
+        if (!data || typeof data !== 'string') return;
+        const parts = data.split('~');
+        if (parts.length < 35) return;
+        
+        const price = parseFloat(parts[3]);
+        const prevClose = parseFloat(parts[4]);
+        const chg = parseFloat(parts[32]);
+        
+        if (!price || isNaN(price)) return;
+        
+        // 更新价格显示
+        const priceEls = document.querySelectorAll('.price');
+        priceEls.forEach(el => {{
+          if (el.dataset.code === code) {{
+            el.textContent = '¥' + price.toFixed(2);
+          }}
+        }});
+        // 更新涨跌幅
+        const chgEls = document.querySelectorAll('.chg');
+        chgEls.forEach(el => {{
+          if (el.dataset.code === code) {{
+            el.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+            el.style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
+          }}
+        }});
       }});
+      // 更新盈亏
+      renderFloatingPnl();
+    }} catch(e) {{
+      console.log('实时数据解析失败', e);
     }}
-  }});
-  
-  // 取多个数据源的平均价格
-  Object.entries(allPrices).forEach(([code, prices]) => {{
-    if (prices.length === 0) return;
-    const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
-    // 更新价格显示
-    const priceEls = document.querySelectorAll('.price');
-    priceEls.forEach(el => {{
-      if (el.dataset.code === code) {{
-        el.textContent = '¥' + avgPrice.toFixed(2);
-        // 标注数据源数量
-        el.title = '数据源: ' + prices.length + '个 · 价格: ' + prices.map(p => p.toFixed(2)).join(' / ');
-      }}
-    }});
-    // 更新涨跌幅
-    const chgEls = document.querySelectorAll('.chg');
-    chgEls.forEach(el => {{
-      if (el.dataset.code === code) {{
-        // 从腾讯数据获取涨跌幅（如果有的话）
-        const tencentPrice = dataSources.tencent.lastPrice[code];
-        if (tencentPrice && tencentPrice.prevClose) {{
-          const chg = (avgPrice - tencentPrice.prevClose) / tencentPrice.prevClose * 100;
-          el.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
-          el.style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
-        }}
-      }}
-    }});
-  }});
-  
-  // 更新盈亏
-  renderFloatingPnl();
-}}
-
-// 数据源1：腾讯
-async function fetchTencent() {{
-  try {{
-    const codes = stockCodes.join(',');
-    const resp = await fetch('https://qt.gtimg.cn/q=' + codes);
-    const text = await resp.text();
-    const prices = {{}};
-    const lines = text.split(';');
-    lines.forEach(line => {{
-      line = line.trim();
-      if (!line || !line.includes('~')) return;
-      const parts = line.split('~');
-      if (parts.length < 5) return;
-      const code = parts[2];
-      const price = parseFloat(parts[3]);
-      const prevClose = parseFloat(parts[4]);
-      if (price && !isNaN(price)) {{
-        prices[code] = price;
-        dataSources.tencent.lastPrice[code] = {{ price: price, prevClose: prevClose }};
-      }}
-    }});
-    dataSources.tencent.ok++;
-    return prices;
-  }} catch(e) {{
-    dataSources.tencent.fail++;
-    return null;
-  }}
-}}
-
-// 数据源2：新浪
-async function fetchSina() {{
-  try {{
-    const codes = stockCodes.map(c => c.startsWith('sh') ? 's_sh' + c.slice(2) : 's_sz' + c.slice(2)).join(',');
-    const resp = await fetch('https://hq.sinajs.cn/list=' + codes);
-    const text = await resp.text();
-    const prices = {{}};
-    const lines = text.split('\n');
-    lines.forEach(line => {{
-      line = line.trim();
-      if (!line || !line.includes('=')) return;
-      const match = line.match(/="([^"]+)"/);
-      if (!match || !match[1]) return;
-      const parts = match[1].split(',');
-      if (parts.length < 4) return;
-      const codeMatch = line.match(/s_(sh|sz)(\d+)/);
-      if (!codeMatch) return;
-      const code = codeMatch[1] + codeMatch[2];
-      const price = parseFloat(parts[3]);
-      if (price && !isNaN(price)) {{
-        prices[code] = price;
-      }}
-    }});
-    dataSources.sina.ok++;
-    return prices;
-  }} catch(e) {{
-    dataSources.sina.fail++;
-    return null;
-  }}
-}}
-
-// 数据源3：东方财富
-async function fetchEastmoney() {{
-  try {{
-    const prices = {{}};
-    for (const code of stockCodes.slice(0, 10)) {{ // 只取前10个，避免请求太多
-      const secid = code.startsWith('sh') ? '1.' + code.slice(2) : '0.' + code.slice(2);
-      try {{
-        const resp = await fetch('https://push2.eastmoney.com/api/qt/stock/get?secid=' + secid + '&fields=f43,f57,f58');
-        const data = await resp.json();
-        if (data.data && data.data.f43) {{
-          prices[code] = data.data.f43 / 100;
-        }}
-      }} catch(e) {{}}
-    }}
-    dataSources.eastmoney.ok++;
-    return prices;
-  }} catch(e) {{
-    dataSources.eastmoney.fail++;
-    return null;
-  }}
+    document.body.removeChild(script);
+  }};
+  script.onerror = () => {{
+    console.log('实时数据请求失败');
+    document.body.removeChild(script);
+  }};
+  document.body.appendChild(script);
 }}
 
 // 浮动盈亏计算
