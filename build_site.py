@@ -162,6 +162,15 @@ print("正在拉取全市场行情（多数据源自动切换）...")
 df, src = fetch_all()
 print(f"已拿到全市场 {len(df)} 只股票（数据源:{src}，可用资金:¥{BUDGET:.2f}）")
 
+# 提取全A股股票列表（用于前端本地搜索）
+all_stocks = []
+for _, row in df.iterrows():
+    code = str(row.get("code", ""))
+    name = str(row.get("name", ""))
+    if code and name:
+        all_stocks.append({"code": code, "name": name})
+print(f"已提取 {len(all_stocks)} 只股票用于前端搜索")
+
 # ============ 5. "能不能买"的过滤（资金约束优先） ============
 def 板块_可买(code):
     code = str(code)
@@ -510,6 +519,9 @@ html_doc = f"""<!DOCTYPE html>
 <script>
 if ('serviceWorker' in navigator) {{ navigator.serviceWorker.register('./service-worker.js'); }}
 
+// 全A股股票列表（后端生成时嵌入）
+const allStocks = {json.dumps(all_stocks, ensure_ascii=False)};
+
 // 清空所有数据
 function clearAllData() {{
   if (!confirm('确定要清空所有交易记录和资金设置吗？此操作不可恢复！')) return;
@@ -556,11 +568,9 @@ function jsonp(url, callbackName) {{
   }});
 }}
 
-// 全网搜索股票功能（用JSONP方式）
-let searchTimer = null;
+// 本地搜索股票功能（从后端嵌入的全A股列表搜索）
 function searchStocks() {{
   const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-  clearTimeout(searchTimer);
   
   // 先搜本地已加载的股票卡片
   const cards = document.querySelectorAll('#stockCards .card');
@@ -574,50 +584,25 @@ function searchStocks() {{
     }}
   }});
   
-  // 隐藏搜索结果列表
-  const searchResult = document.getElementById('searchResult');
-  if (searchResult) searchResult.style.display = 'none';
+  // 从全A股列表搜索
+  if (!keyword) {{
+    const searchResult = document.getElementById('searchResult');
+    if (searchResult) searchResult.style.display = 'none';
+    return;
+  }}
   
-  if (!keyword) return;
+  // 从allStocks数组中搜索
+  const results = allStocks.filter(s => 
+    s.name.toLowerCase().includes(keyword) || 
+    s.code.toLowerCase().includes(keyword)
+  ).slice(0, 15);
   
-  // 用JSONP方式调用腾讯搜索API
-  searchTimer = setTimeout(() => {{
-    // 用腾讯搜索API（JSONP方式，v_hint是全局变量）
-    const script = document.createElement('script');
-    script.src = 'https://smartbox.gtimg.cn/s3/?v=2&q=' + encodeURIComponent(keyword) + '&t=all';
-    script.onload = () => {{
-      try {{
-        // 解析全局变量v_hint
-        // 实际格式：v_hint="sh~600519~贵州茅台~gzmt~GP-A"
-        // 字段顺序：市场(sh/sz)~代码(600519)~名称(贵州茅台)~拼音~类型
-        if (typeof v_hint !== 'undefined' && v_hint) {{
-          const items = v_hint.split('^');
-          const results = [];
-          items.forEach(item => {{
-            const parts = item.split('~');
-            if (parts.length >= 3 && parts[0] && parts[1] && parts[2]) {{
-              results.push({{
-                code: parts[0] + parts[1],  // 完整代码：sh600519
-                name: parts[2],            // 名称：贵州茅台
-                market: parts[0]           // 市场：sh
-              }});
-            }}
-          }});
-          if (results.length > 0) {{
-            showSearchResult(results.slice(0, 10));
-          }}
-        }}
-      }} catch(e) {{
-        console.log('搜索解析失败', e);
-      }}
-      document.body.removeChild(script);
-    }};
-    script.onerror = () => {{
-      console.log('搜索请求失败');
-      document.body.removeChild(script);
-    }};
-    document.body.appendChild(script);
-  }}, 300);
+  if (results.length > 0) {{
+    showSearchResult(results);
+  }} else {{
+    const searchResult = document.getElementById('searchResult');
+    if (searchResult) searchResult.style.display = 'none';
+  }}
 }}
 
 function showSearchResult(results) {{
