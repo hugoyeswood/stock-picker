@@ -613,7 +613,6 @@ function clearAllData() {{
   alert('已清空所有记录！');
   location.reload();
 }}
-</script>
 
 // 清空搜索
 function clearSearch() {{
