@@ -384,23 +384,46 @@ html_doc = f"""<!DOCTYPE html>
   .chart-container {{ margin-top:10px; border:1px solid #eee; border-radius:8px; padding:8px; background:#fafafa; }}
   .chart-title {{ font-size:12px; color:#666; margin-bottom:4px; }}
   .chart-container canvas {{ width:100%; height:200px; }}
+  .search-box {{ margin:10px 0; }}
+  .search-box input {{ width:100%; padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:14px; box-sizing:border-box; }}
+  .search-box input:focus {{ outline:none; border-color:#1a237e; }}
   .foot {{ font-size:11px; color:#999; text-align:center; margin-top:16px; line-height:1.6; }}
 </style></head><body>
 <h1>今日候选清单</h1>
 <div class="sub">更新于 {now} · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f}</div>
 <div class="tip"><b>怎么用：</b>看卡片【状态】——"可买"按【建议买入区间】挂限价单买1手；"等回踩"别追高；"观望"先别碰。<br>
 买入后设好<b>止损</b>(跌到就走)和<b>止盈</b>(涨到落袋)。<b>提醒：</b>数据筛选，非投资建议；涨跌有风险，控制仓位。</div>
+<div class="search-box">
+  <input type="text" id="searchInput" placeholder="🔍 输入股票代码或名称搜索..." oninput="searchStocks()">
+</div>
 <div class="stat">
   <div><b>{len(out)}</b><span>今日候选</span></div>
   <div><b>{len(pool)}</b><span>买得起的候选</span></div>
   <div><b>{sum(1 for x in out if x['trade']['state']=='可买')}</b><span>"可买"数量</span></div>
 </div>
 {wallet_html}
+<div id="stockCards">
 {cards}
+</div>
 <div class="foot">状态依据：现价 vs 20日均线、离5日均线远近；买入区间=现价与MA5之间。<br>
 资金账户：本地 python add_fund.py 转入资金后重新部署 · 添加到主屏幕即可像App一样用 · 每天收盘后自动更新</div>
 <script>
 if ('serviceWorker' in navigator) {{ navigator.serviceWorker.register('./service-worker.js'); }}
+
+// 搜索股票功能
+function searchStocks() {{
+  const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+  const cards = document.querySelectorAll('#stockCards .card');
+  cards.forEach(card => {{
+    const name = card.querySelector('.name')?.textContent.toLowerCase() || '';
+    const code = card.querySelector('.code')?.textContent.toLowerCase() || '';
+    if (!keyword || name.includes(keyword) || code.includes(keyword)) {{
+      card.style.display = '';
+    }} else {{
+      card.style.display = 'none';
+    }}
+  }});
+}}
 
 // 交易记录功能（存在手机本地）
 function getTrades() {{
@@ -452,6 +475,14 @@ function renderTrades() {{
     const pnlSign = realizedPnl >= 0 ? '+' : '';
     html += '<div class="trade-item">';
     html += '<b>' + p.name + '</b>：持仓 ' + holdQty + '股，成本 ¥' + avgCost.toFixed(2);
+    if (holdQty > 0) {{
+      const takeProfit = avgCost * 1.15;
+      const stopLoss = avgCost * 0.85;
+      html += '<div style="margin-top:4px;font-size:12px;color:#666;">';
+      html += '止盈(+15%)：<span style="color:#c62828;font-weight:bold;">¥' + takeProfit.toFixed(2) + '</span>';
+      html += ' · 止损(-15%)：<span style="color:#2e7d32;font-weight:bold;">¥' + stopLoss.toFixed(2) + '</span>';
+      html += '</div>';
+    }}
     if (p.sellQty > 0) html += '，已实现盈亏 <span class="' + pnlClass + '">' + pnlSign + '¥' + realizedPnl.toFixed(2) + '</span>';
     html += '</div>';
   }});
@@ -561,7 +592,16 @@ function renderFloatingPnl() {{
     totalFloating += floatingPnl;
     const cls = floatingPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
     const sign = floatingPnl >= 0 ? '+' : '';
-    html += '<div class="trade-item">' + p.name + ' 浮动盈亏：<span class="' + cls + '">' + sign + '¥' + floatingPnl.toFixed(2) + '</span></div>';
+    html += '<div class="trade-item">' + p.name + ' 浮动盈亏：<span class="' + cls + '">' + sign + '¥' + floatingPnl.toFixed(2) + '</span>';
+    // 止盈止损提醒
+    const takeProfit = avgCost * 1.15;
+    const stopLoss = avgCost * 0.85;
+    if (curPrice >= takeProfit) {{
+      html += ' <span style="background:#ffeb3b;color:#000;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:bold;">⚠ 已达止盈</span>';
+    }} else if (curPrice <= stopLoss) {{
+      html += ' <span style="background:#ff5722;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:bold;">⚠ 已达止损</span>';
+    }}
+    html += '</div>';
   }});
   if (html) {{
     const div = document.createElement('div');
