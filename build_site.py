@@ -550,7 +550,60 @@ html_doc = f"""<!DOCTYPE html>
 <div class="foot">状态依据：现价 vs 20日均线、离5日均线远近；买入区间=现价与MA5之间。<br>
 ⚠️ 本工具仅为数据筛选参考，不构成投资建议。股市有风险，入市需谨慎。</div>
 <script>
-if ('serviceWorker' in navigator) {{ navigator.serviceWorker.register('./service-worker.js'); }}
+// 实时更新当前时间
+function updateCurrentTime() {{
+  try {{
+    var now = new Date();
+    var year = now.getFullYear();
+    var month = String(now.getMonth() + 1).padStart(2, '0');
+    var day = String(now.getDate()).padStart(2, '0');
+    var hours = String(now.getHours()).padStart(2, '0');
+    var minutes = String(now.getMinutes()).padStart(2, '0');
+    var seconds = String(now.getSeconds()).padStart(2, '0');
+    var weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    var weekday = weekdays[now.getDay()];
+    var timeStr = year + '-' + month + '-' + day + ' ' + weekday + ' ' + hours + ':' + minutes + ':' + seconds;
+    var el = document.getElementById('currentTime');
+    if (el) el.textContent = timeStr;
+  }} catch(e) {{}}
+}}
+updateCurrentTime();
+setInterval(updateCurrentTime, 1000);
+
+// 搜索功能
+function doSearch() {{
+  try {{
+    var keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+    var cards = document.querySelectorAll('#stockCards .card');
+    var matchCount = 0;
+    cards.forEach(function(card) {{
+      var name = card.querySelector('.name')?.textContent.toLowerCase() || '';
+      var code = card.querySelector('.code')?.textContent.toLowerCase() || '';
+      if (!keyword || name.includes(keyword) || code.includes(keyword)) {{
+        card.style.display = '';
+        matchCount++;
+      }} else {{
+        card.style.display = 'none';
+      }}
+    }});
+    if (keyword) alert('搜索到 ' + matchCount + ' 只匹配的股票');
+  }} catch(e) {{
+    alert('搜索出错: ' + e.message);
+  }}
+}}
+
+// 编辑资金功能
+function editBudget() {{
+  try {{
+    var v = prompt('请输入可用资金（元）：', 1000);
+    if (!v || isNaN(v) || v <= 0) return;
+    localStorage.setItem('myBudget', v);
+    alert('资金已更新：¥' + parseFloat(v).toFixed(2));
+    location.reload();
+  }} catch(e) {{
+    alert('编辑出错: ' + e.message);
+  }}
+}}
 
 // 清空所有数据
 function clearAllData() {{
@@ -560,114 +613,7 @@ function clearAllData() {{
   alert('已清空所有记录！');
   location.reload();
 }}
-
-// 实时更新当前时间
-function updateCurrentTime() {{
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-  const weekday = weekdays[now.getDay()];
-  const timeStr = `${{year}}-${{month}}-${{day}} ${{weekday}} ${{hours}}:${{minutes}}:${{seconds}}`;
-  document.getElementById('currentTime').textContent = timeStr;
-}}
-updateCurrentTime();
-setInterval(updateCurrentTime, 1000);
-
-// 获取大盘指数（JSONP方式）
-function fetchMarketIndex() {{
-  const script = document.createElement('script');
-  script.src = 'https://qt.gtimg.cn/q=sh000001,sz399001,sz399006';
-  script.onload = () => {{
-    try {{
-      // 上证指数
-      if (typeof v_sh000001 !== 'undefined') {{
-        const parts = v_sh000001.split('~');
-        const price = parseFloat(parts[3]);
-        const chg = parseFloat(parts[32]);
-        if (price) {{
-          document.getElementById('shIndex').textContent = price.toFixed(2);
-          document.getElementById('shIndex').style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
-        }}
-      }}
-      // 深证成指
-      if (typeof v_sz399001 !== 'undefined') {{
-        const parts = v_sz399001.split('~');
-        const price = parseFloat(parts[3]);
-        const chg = parseFloat(parts[32]);
-        if (price) {{
-          document.getElementById('szIndex').textContent = price.toFixed(2);
-          document.getElementById('szIndex').style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
-        }}
-      }}
-      // 创业板指
-      if (typeof v_sz399006 !== 'undefined') {{
-        const parts = v_sz399006.split('~');
-        const price = parseFloat(parts[3]);
-        const chg = parseFloat(parts[32]);
-        if (price) {{
-          document.getElementById('cyIndex').textContent = price.toFixed(2);
-          document.getElementById('cyIndex').style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
-        }}
-      }}
-    }} catch(e) {{
-      console.log('大盘指数解析失败', e);
-    }}
-    document.body.removeChild(script);
-  }};
-  script.onerror = () => {{
-    document.body.removeChild(script);
-  }};
-  document.body.appendChild(script);
-}}
-fetchMarketIndex();
-setInterval(fetchMarketIndex, 5000); // 每5秒刷新一次大盘指数
-
-// JSONP辅助函数（绕过CORS跨域限制）
-function jsonp(url, callbackName) {{
-  return new Promise((resolve, reject) => {{
-    const script = document.createElement('script');
-    // 创建全局回调函数
-    window[callbackName] = (data) => {{
-      resolve(data);
-      // 清理
-      delete window[callbackName];
-      document.body.removeChild(script);
-    }};
-    script.src = url;
-    script.onerror = () => {{
-      reject(new Error('JSONP请求失败'));
-      document.body.removeChild(script);
-    }};
-    document.body.appendChild(script);
-  }});
-}}
-
-// 简单搜索功能（点击按钮后过滤页面股票）
-function doSearch() {{
-  const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-  const cards = document.querySelectorAll('#stockCards .card');
-  let matchCount = 0;
-  
-  cards.forEach(card => {{
-    const name = card.querySelector('.name')?.textContent.toLowerCase() || '';
-    const code = card.querySelector('.code')?.textContent.toLowerCase() || '';
-    if (!keyword || name.includes(keyword) || code.includes(keyword)) {{
-      card.style.display = '';
-      matchCount++;
-    }} else {{
-      card.style.display = 'none';
-    }}
-  }});
-  
-  if (keyword) {{
-    alert('搜索到 ' + matchCount + ' 只匹配的股票');
-  }}
-}}
+</script>
 
 // 清空搜索
 function clearSearch() {{
