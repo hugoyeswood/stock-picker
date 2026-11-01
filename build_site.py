@@ -728,10 +728,10 @@ function renderFloatingPnl() {{
   }}
 }}
 
-// 每30秒刷新一次
-setInterval(refreshRealtime, 30000);
+// 每5秒刷新一次（秒级实时更新）
+setInterval(refreshRealtime, 5000);
 // 页面加载后先刷新一次
-setTimeout(refreshRealtime, 2000);
+setTimeout(refreshRealtime, 1000);
 
 // K线图功能
 function toggleChart(chartId) {{
