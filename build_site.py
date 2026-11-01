@@ -261,6 +261,10 @@ for r in out:
       </div>
       <div class="why">{esc(r['why'])}</div>
       <div class="hands">你的 ¥{BUDGET:.0f} 可买 <b>{r['hands']}手</b>（约{r['cost']}元，一手=100股）</div>
+      <div>
+        <button class="trade-btn btn-buy" onclick="recordTrade('buy','{esc(r['code'])}','{esc(r['name'])}',{r['price']})">记录买入</button>
+        <button class="trade-btn btn-sell" onclick="recordTrade('sell','{esc(r['code'])}','{esc(r['name'])}',{r['price']})">记录卖出</button>
+      </div>
     </div>"""
 
 wallet_rows = ""
@@ -274,6 +278,10 @@ wallet_html = f"""
     <div class="w-total">当前可用 <b>¥{BUDGET:.2f}</b></div></div>
   <div class="w-rows">{wallet_rows}</div>
   <div class="w-hint">要转入资金？本地运行 <b>python add_fund.py</b>，然后重新部署即可。</div>
+  <div class="trades">
+    <h3>📋 我的交易记录</h3>
+    <div id="tradeList"><div style="font-size:12px;color:#999;">还没有交易记录，点下面的按钮开始记录</div></div>
+  </div>
 </div>"""
 
 html_doc = f"""<!DOCTYPE html>
@@ -329,6 +337,15 @@ html_doc = f"""<!DOCTYPE html>
   .w-amt {{ font-weight:bold; color:#2e7d32; }}
   .w-note {{ color:#666; flex:1; }}
   .w-hint {{ font-size:12px; color:#888; margin-top:6px; }}
+  .trade-btn {{ display:inline-block; margin:6px 6px 0 0; padding:7px 16px; border-radius:8px;
+               border:none; font-size:13px; font-weight:bold; cursor:pointer; }}
+  .btn-buy {{ background:#c62828; color:#fff; }}
+  .btn-sell {{ background:#2e7d32; color:#fff; }}
+  .trades {{ margin-top:10px; border-top:1px solid #eee; padding-top:10px; }}
+  .trades h3 {{ font-size:14px; color:#1a237e; margin-bottom:6px; }}
+  .trade-item {{ font-size:12px; padding:5px 0; border-bottom:1px dashed #eee; color:#444; }}
+  .pnl-pos {{ color:#c62828; font-weight:bold; }}
+  .pnl-neg {{ color:#2e7d32; font-weight:bold; }}
   .foot {{ font-size:11px; color:#999; text-align:center; margin-top:16px; line-height:1.6; }}
 </style></head><body>
 <h1>今日候选清单</h1>
@@ -346,6 +363,62 @@ html_doc = f"""<!DOCTYPE html>
 资金账户：本地 python add_fund.py 转入资金后重新部署 · 添加到主屏幕即可像App一样用 · 每天收盘后自动更新</div>
 <script>
 if ('serviceWorker' in navigator) {{ navigator.serviceWorker.register('./service-worker.js'); }}
+
+// 交易记录功能（存在手机本地）
+function getTrades() {{
+  try {{ return JSON.parse(localStorage.getItem('myTrades') || '[]'); }}
+  catch(e) {{ return []; }}
+}}
+function saveTrades(t) {{
+  localStorage.setItem('myTrades', JSON.stringify(t));
+  renderTrades();
+}}
+function recordTrade(type, code, name, price) {{
+  const qty = prompt('请输入数量（股），1手=100股：', '100');
+  if (!qty || isNaN(qty) || qty <= 0) return;
+  const trades = getTrades();
+  trades.push({{
+    type: type, code: code, name: name,
+    price: price, qty: parseInt(qty),
+    time: new Date().toLocaleString('zh-CN')
+  }});
+  saveTrades(trades);
+  alert((type === 'buy' ? '买入' : '卖出') + '记录成功：' + name + ' ' + qty + '股 @ ¥' + price);
+}}
+function renderTrades() {{
+  const trades = getTrades();
+  const list = document.getElementById('tradeList');
+  if (!trades.length) {{
+    list.innerHTML = '<div style="font-size:12px;color:#999;">还没有交易记录，点下面的按钮开始记录</div>';
+    return;
+  }}
+  // 计算持仓和盈亏
+  const positions = {{}};
+  trades.forEach(t => {{
+    if (!positions[t.code]) positions[t.code] = {{ name: t.name, buyQty: 0, buyCost: 0, sellQty: 0, sellRevenue: 0 }};
+    if (t.type === 'buy') {{ positions[t.code].buyQty += t.qty; positions[t.code].buyCost += t.price * t.qty; }}
+    else {{ positions[t.code].sellQty += t.qty; positions[t.code].sellRevenue += t.price * t.qty; }}
+  }});
+  let html = '';
+  Object.values(positions).forEach(p => {{
+    const holdQty = p.buyQty - p.sellQty;
+    const avgCost = p.buyQty > 0 ? (p.buyCost / p.buyQty) : 0;
+    const realizedPnl = p.sellRevenue - (p.sellQty * avgCost);
+    const pnlClass = realizedPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
+    const pnlSign = realizedPnl >= 0 ? '+' : '';
+    html += '<div class="trade-item">';
+    html += '<b>' + p.name + '</b>：持仓 ' + holdQty + '股，成本 ¥' + avgCost.toFixed(2);
+    if (p.sellQty > 0) html += '，已实现盈亏 <span class="' + pnlClass + '">' + pnlSign + '¥' + realizedPnl.toFixed(2) + '</span>';
+    html += '</div>';
+  }});
+  // 最近5条明细
+  html += '<div style="margin-top:6px;font-size:11px;color:#888;">最近记录：</div>';
+  trades.slice(-5).reverse().forEach(t => {{
+    html += '<div class="trade-item">' + t.time + ' ' + (t.type === 'buy' ? '买入' : '卖出') + ' ' + t.name + ' ' + t.qty + '股 @ ¥' + t.price + '</div>';
+  }});
+  list.innerHTML = html;
+}}
+renderTrades();
 </script>
 </body></html>"""
 
