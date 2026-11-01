@@ -442,7 +442,7 @@ html_doc = f"""<!DOCTYPE html>
   .foot {{ font-size:11px; color:#999; text-align:center; margin-top:16px; line-height:1.6; }}
 </style></head><body>
 <h1>今日候选清单</h1>
-<div class="sub">更新于 {now} · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f}</div>
+<div class="sub">数据更新于 {now} · 当前时间：<span id="currentTime"></span> · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f}</div>
 
 <!-- 新手引导（3步） -->
 <div class="tip" style="background:#e3f2fd;border-left:4px solid #1976d2;">
@@ -518,6 +518,23 @@ function clearAllData() {{
   alert('已清空所有记录！');
   location.reload();
 }}
+
+// 实时更新当前时间
+function updateCurrentTime() {{
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  const weekday = weekdays[now.getDay()];
+  const timeStr = `${{year}}-${{month}}-${{day}} ${{weekday}} ${{hours}}:${{minutes}}:${{seconds}}`;
+  document.getElementById('currentTime').textContent = timeStr;
+}}
+updateCurrentTime();
+setInterval(updateCurrentTime, 1000);
 
 // JSONP辅助函数（绕过CORS跨域限制）
 function jsonp(url, callbackName) {{
