@@ -374,16 +374,20 @@ function saveTrades(t) {{
   renderTrades();
 }}
 function recordTrade(type, code, name, price) {{
-  const qty = prompt('请输入数量（股），1手=100股：', '100');
-  if (!qty || isNaN(qty) || qty <= 0) return;
+  const priceInput = prompt('请输入实际成交价格（元）：', price);
+  if (!priceInput || isNaN(priceInput) || priceInput <= 0) return;
+  const qtyInput = prompt('请输入数量（股），1手=100股：', '100');
+  if (!qtyInput || isNaN(qtyInput) || qtyInput <= 0) return;
+  const actualPrice = parseFloat(priceInput);
+  const qty = parseInt(qtyInput);
   const trades = getTrades();
   trades.push({{
     type: type, code: code, name: name,
-    price: price, qty: parseInt(qty),
+    price: actualPrice, qty: qty,
     time: new Date().toLocaleString('zh-CN')
   }});
   saveTrades(trades);
-  alert((type === 'buy' ? '买入' : '卖出') + '记录成功：' + name + ' ' + qty + '股 @ ¥' + price);
+  alert((type === 'buy' ? '买入' : '卖出') + '记录成功：' + name + ' ' + qty + '股 @ ¥' + actualPrice.toFixed(2));
 }}
 function renderTrades() {{
   const trades = getTrades();
@@ -400,10 +404,12 @@ function renderTrades() {{
     else {{ positions[t.code].sellQty += t.qty; positions[t.code].sellRevenue += t.price * t.qty; }}
   }});
   let html = '';
+  let totalPnl = 0;
   Object.values(positions).forEach(p => {{
     const holdQty = p.buyQty - p.sellQty;
     const avgCost = p.buyQty > 0 ? (p.buyCost / p.buyQty) : 0;
     const realizedPnl = p.sellRevenue - (p.sellQty * avgCost);
+    totalPnl += realizedPnl;
     const pnlClass = realizedPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
     const pnlSign = realizedPnl >= 0 ? '+' : '';
     html += '<div class="trade-item">';
@@ -411,10 +417,16 @@ function renderTrades() {{
     if (p.sellQty > 0) html += '，已实现盈亏 <span class="' + pnlClass + '">' + pnlSign + '¥' + realizedPnl.toFixed(2) + '</span>';
     html += '</div>';
   }});
+  // 总盈亏
+  const totalClass = totalPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
+  const totalSign = totalPnl >= 0 ? '+' : '';
+  html += '<div style="margin-top:6px;padding:6px;background:#f5f5f5;border-radius:6px;font-size:13px;">';
+  html += '总已实现盈亏：<span class="' + totalClass + '"><b>' + totalSign + '¥' + totalPnl.toFixed(2) + '</b></span>';
+  html += '</div>';
   // 最近5条明细
   html += '<div style="margin-top:6px;font-size:11px;color:#888;">最近记录：</div>';
   trades.slice(-5).reverse().forEach(t => {{
-    html += '<div class="trade-item">' + t.time + ' ' + (t.type === 'buy' ? '买入' : '卖出') + ' ' + t.name + ' ' + t.qty + '股 @ ¥' + t.price + '</div>';
+    html += '<div class="trade-item">' + t.time + ' ' + (t.type === 'buy' ? '买入' : '卖出') + ' ' + t.name + ' ' + t.qty + '股 @ ¥' + t.price.toFixed(2) + '</div>';
   }});
   list.innerHTML = html;
 }}
