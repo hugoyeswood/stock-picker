@@ -519,9 +519,9 @@ html_doc = f"""<!DOCTYPE html>
   <div style="font-size:11px;opacity:0.8;text-align:center;margin-top:6px;">⚠️ 涨停预测仅供参考，实际走势受多种因素影响，注意风险</div>
 </div>
 
-<div class="search-box">
-  <input type="text" id="searchInput" placeholder="输入股票代码或名称搜索..." oninput="onSearchInput()" onfocus="onSearchInput()">
-  <div id="searchDropdown" class="search-dropdown"></div>
+<div class="search-box" style="display:flex;gap:8px;">
+  <input type="text" id="searchInput" placeholder="输入股票代码或名称..." style="flex:1;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+  <button onclick="doSearch()" style="padding:10px 20px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">搜索</button>
 </div>
 <div class="stat">
   <div><b>{len(out)}</b><span>今日候选</span></div>
@@ -650,61 +650,34 @@ function jsonp(url, callbackName) {{
   }});
 }}
 
-// 搜索栏下拉建议功能
-function onSearchInput() {{
+// 简单搜索功能（点击按钮后过滤页面股票）
+function doSearch() {{
   const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-  const dropdown = document.getElementById('searchDropdown');
-  
-  if (!keyword) {{
-    dropdown.style.display = 'none';
-    return;
-  }}
-  
-  // 从当前页面的股票卡片搜索
   const cards = document.querySelectorAll('#stockCards .card');
-  const results = [];
+  let matchCount = 0;
+  
   cards.forEach(card => {{
     const name = card.querySelector('.name')?.textContent.toLowerCase() || '';
     const code = card.querySelector('.code')?.textContent.toLowerCase() || '';
-    const price = card.querySelector('.price')?.textContent || '';
-    const chg = card.querySelector('.chg')?.textContent || '';
-    if (name.includes(keyword) || code.includes(keyword)) {{
-      results.push({{name: name, code: code, price: price, chg: chg}});
+    if (!keyword || name.includes(keyword) || code.includes(keyword)) {{
+      card.style.display = '';
+      matchCount++;
+    }} else {{
+      card.style.display = 'none';
     }}
   }});
   
-  if (results.length === 0) {{
-    dropdown.style.display = 'none';
-    return;
+  if (keyword) {{
+    alert('搜索到 ' + matchCount + ' 只匹配的股票');
   }}
-  
-  // 显示下拉建议
-  let html = '';
-  results.slice(0, 10).forEach(r => {{
-    html += '<div class="search-dropdown-item" onclick="selectSearchResult(\'' + r.code + '\',\'' + r.name + '\')">';
-    html += '<div><b style="color:#1a237e;">' + r.name + '</b> <span style="color:#666;font-size:12px;">' + r.code + '</span></div>';
-    html += '<div style="text-align:right;"><div>' + r.price + '</div><div style="font-size:12px;">' + r.chg + '</div></div>';
-    html += '</div>';
-  }});
-  dropdown.innerHTML = html;
-  dropdown.style.display = 'block';
 }}
 
-// 点击下拉建议中的股票
-function selectSearchResult(code, name) {{
-  document.getElementById('searchInput').value = name + ' ' + code;
-  document.getElementById('searchDropdown').style.display = 'none';
-  // 显示股票详情
-  showStockDetail(code, name);
+// 清空搜索
+function clearSearch() {{
+  document.getElementById('searchInput').value = '';
+  const cards = document.querySelectorAll('#stockCards .card');
+  cards.forEach(card => card.style.display = '');
 }}
-
-// 点击页面其他地方关闭下拉建议
-document.addEventListener('click', function(e) {{
-  const searchBox = document.querySelector('.search-box');
-  if (!searchBox.contains(e.target)) {{
-    document.getElementById('searchDropdown').style.display = 'none';
-  }}
-}});
 
 function showSearchResult(results) {{
   let div = document.getElementById('searchResult');
