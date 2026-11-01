@@ -264,8 +264,8 @@ for r in out:
              <span class="state" style="background:{bg};color:{fg}">{esc(t['state'])}</span></div>
       </div>
       <div class="price-line">
-        <span class="price">¥{r['price']:.2f}</span>
-        <span class="chg" style="color:{c_chg}">{fmt_pct(r['chg'])}</span>
+        <span class="price" data-code="{esc(r['code'])}">¥{r['price']:.2f}</span>
+        <span class="chg" data-code="{esc(r['code'])}" style="color:{c_chg}">{fmt_pct(r['chg'])}</span>
       </div>
       <div class="limit-row">
         <span class="limit-up">涨停 ¥{t.get('limit_up', '--')}</span>
@@ -306,9 +306,9 @@ for item in WALLET_LEDGER[-5:][::-1]:
 wallet_html = f"""
 <div class="card wallet">
   <div class="card-top"><div class="name">资金账户</div>
-    <div class="w-total">当前可用 <b>¥{BUDGET:.2f}</b></div></div>
+    <div class="w-total">当前可用 <b>¥{BUDGET:.2f}</b> <button onclick="editBudget()" style="margin-left:8px;font-size:12px;padding:3px 10px;background:#1a237e;color:#fff;border:none;border-radius:4px;cursor:pointer;">编辑</button></div></div>
   <div class="w-rows">{wallet_rows}</div>
-  <div class="w-hint">要转入资金？本地运行 <b>python add_fund.py</b>，然后重新部署即可。</div>
+  <div class="w-hint">点"编辑"可直接修改可用资金，数据保存在本地。</div>
   <div class="trades">
     <h3>📋 我的交易记录</h3>
     <div id="tradeList"><div style="font-size:12px;color:#999;">还没有交易记录，点下面的按钮开始记录</div></div>
@@ -469,6 +469,116 @@ function renderTrades() {{
   list.innerHTML = html;
 }}
 renderTrades();
+
+// 可用资金（可自由修改）
+function getBudget() {{
+  const saved = localStorage.getItem('myBudget');
+  return saved ? parseFloat(saved) : {BUDGET};
+}}
+function setBudget(v) {{
+  localStorage.setItem('myBudget', v);
+  renderBudget();
+}}
+function renderBudget() {{
+  const b = getBudget();
+  document.querySelectorAll('.w-total b').forEach(el => el.textContent = '¥' + b.toFixed(2));
+}}
+function editBudget() {{
+  const v = prompt('请输入可用资金（元）：', getBudget());
+  if (!v || isNaN(v) || v <= 0) return;
+  setBudget(parseFloat(v));
+  alert('资金已更新：¥' + parseFloat(v).toFixed(2));
+}}
+renderBudget();
+
+// 实时行情刷新（每30秒）
+const stockCodes = [{','.join(f"'{r['code']}'" for r in out)}];
+
+async function refreshRealtime() {{
+  try {{
+    const codes = stockCodes.join(',');
+    const resp = await fetch('https://qt.gtimg.cn/q=' + codes);
+    const text = await resp.text();
+    const lines = text.split(';');
+    lines.forEach(line => {{
+      line = line.trim();
+      if (!line || !line.includes('~')) return;
+      const parts = line.split('~');
+      if (parts.length < 5) return;
+      const code = parts[2];
+      const price = parseFloat(parts[3]);
+      const chg = parseFloat(parts[32]);
+      if (!price || isNaN(price)) return;
+      // 更新价格显示
+      const priceEls = document.querySelectorAll('.price');
+      priceEls.forEach(el => {{
+        if (el.dataset.code === code) {{
+          el.textContent = '¥' + price.toFixed(2);
+        }}
+      }});
+      // 更新涨跌幅
+      const chgEls = document.querySelectorAll('.chg');
+      chgEls.forEach(el => {{
+        if (el.dataset.code === code) {{
+          el.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+          el.style.color = chg >= 0 ? '#d32f2f' : '#2e7d32';
+        }}
+      }});
+    }});
+    // 更新盈亏
+    renderFloatingPnl();
+  }} catch(e) {{
+    console.log('刷新失败', e);
+  }}
+}}
+
+// 浮动盈亏计算
+function renderFloatingPnl() {{
+  const trades = getTrades();
+  if (!trades.length) return;
+  const positions = {{}};
+  trades.forEach(t => {{
+    if (!positions[t.code]) positions[t.code] = {{ name: t.name, buyQty: 0, buyCost: 0, sellQty: 0, sellRevenue: 0 }};
+    if (t.type === 'buy') {{ positions[t.code].buyQty += t.qty; positions[t.code].buyCost += t.price * t.qty; }}
+    else {{ positions[t.code].sellQty += t.qty; positions[t.code].sellRevenue += t.price * t.qty; }}
+  }});
+  // 找当前浮动盈亏显示区域
+  const list = document.getElementById('tradeList');
+  if (!list) return;
+  // 在已实现盈亏后面加上浮动盈亏
+  const floatingDiv = document.getElementById('floatingPnl');
+  if (floatingDiv) floatingDiv.remove();
+  let totalFloating = 0;
+  let html = '';
+  Object.values(positions).forEach(p => {{
+    const holdQty = p.buyQty - p.sellQty;
+    if (holdQty <= 0) return;
+    const avgCost = p.buyCost / p.buyQty;
+    // 找当前价格
+    const priceEl = document.querySelector(`.price[data-code="${{p.code}}"]`);
+    const curPrice = priceEl ? parseFloat(priceEl.textContent.replace('¥', '')) : avgCost;
+    const floatingPnl = (curPrice - avgCost) * holdQty;
+    totalFloating += floatingPnl;
+    const cls = floatingPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
+    const sign = floatingPnl >= 0 ? '+' : '';
+    html += '<div class="trade-item">' + p.name + ' 浮动盈亏：<span class="' + cls + '">' + sign + '¥' + floatingPnl.toFixed(2) + '</span></div>';
+  }});
+  if (html) {{
+    const div = document.createElement('div');
+    div.id = 'floatingPnl';
+    const totalCls = totalFloating >= 0 ? 'pnl-pos' : 'pnl-neg';
+    const totalSign = totalFloating >= 0 ? '+' : '';
+    div.innerHTML = '<div style="margin-top:6px;padding:6px;background:#e8eaf6;border-radius:6px;font-size:13px;">' +
+      '总浮动盈亏：<span class="' + totalCls + '"><b>' + totalSign + '¥' + totalFloating.toFixed(2) + '</b></span></div>' +
+      html;
+    list.appendChild(div);
+  }}
+}}
+
+// 每30秒刷新一次
+setInterval(refreshRealtime, 30000);
+// 页面加载后先刷新一次
+setTimeout(refreshRealtime, 2000);
 
 // K线图功能
 function toggleChart(chartId) {{
