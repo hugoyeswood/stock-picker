@@ -571,40 +571,31 @@ function jsonp(url, callbackName) {{
   }});
 }}
 
-// 本地搜索股票功能（从后端嵌入的全A股列表搜索）
+// 搜索股票功能（从当前页面股票列表过滤）
 function searchStocks() {{
   const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
   
-  // 先搜本地已加载的股票卡片
+  // 从当前页面的股票卡片搜索
   const cards = document.querySelectorAll('#stockCards .card');
+  let matchCount = 0;
   cards.forEach(card => {{
     const name = card.querySelector('.name')?.textContent.toLowerCase() || '';
     const code = card.querySelector('.code')?.textContent.toLowerCase() || '';
     if (!keyword || name.includes(keyword) || code.includes(keyword)) {{
       card.style.display = '';
+      matchCount++;
     }} else {{
       card.style.display = 'none';
     }}
   }});
   
-  // 从全A股列表搜索
-  if (!keyword) {{
-    const searchResult = document.getElementById('searchResult');
-    if (searchResult) searchResult.style.display = 'none';
-    return;
-  }}
+  // 隐藏搜索结果下拉框
+  const searchResult = document.getElementById('searchResult');
+  if (searchResult) searchResult.style.display = 'none';
   
-  // 从allStocks数组中搜索
-  const results = allStocks.filter(s => 
-    s.name.toLowerCase().includes(keyword) || 
-    s.code.toLowerCase().includes(keyword)
-  ).slice(0, 15);
-  
-  if (results.length > 0) {{
-    showSearchResult(results);
-  }} else {{
-    const searchResult = document.getElementById('searchResult');
-    if (searchResult) searchResult.style.display = 'none';
+  // 提示搜索结果数量
+  if (keyword) {{
+    alert('搜索到 ' + matchCount + ' 只匹配的股票');
   }}
 }}
 
