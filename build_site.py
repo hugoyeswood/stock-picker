@@ -202,6 +202,44 @@ scored.sort(reverse=True, key=lambda x: x[0])
 top = scored[:TOP_N]
 print(f"达到信号门槛(≥3分)的有 {len(scored)} 只，取前 {TOP_N} 只")
 
+# ============ 6.5 涨停预测（专门筛选当日涨停潜力股） ============
+def 涨停预测分(r):
+    """计算涨停潜力分数"""
+    s, reasons = 0, []
+    # 当天涨幅3%-9%（还没涨停，但已经有涨幅）
+    if pd.notna(r["chg"]):
+        if 3 <= r["chg"] <= 9:
+            s += 3; reasons.append(f"今日已涨{r['chg']:.1f}%，有冲涨停动力")
+        elif 1 <= r["chg"] < 3:
+            s += 1; reasons.append(f"今日小涨{r['chg']:.1f}%，蓄势中")
+    # 量比放大（>1.5说明资金涌入）
+    if pd.notna(r["lb"]) and r["lb"] > 1.5:
+        s += 2; reasons.append(f"量比{r['lb']:.1f}，资金明显涌入")
+    # 换手率活跃（2%-10%）
+    if pd.notna(r["hsl"]) and 2 <= r["hsl"] <= 10:
+        s += 1; reasons.append(f"换手{r['hsl']:.1f}%，交投活跃")
+    # 主力资金流入
+    if pd.notna(r["mflow"]) and r["mflow"] > 0:
+        s += 1; reasons.append("主力资金净流入")
+    # 近期走势强势
+    if pd.notna(r["chg5"]) and r["chg5"] > 0:
+        s += 1; reasons.append(f"近5日涨{r['chg5']:.1f}%，趋势向上")
+    if pd.notna(r["chg10"]) and r["chg10"] > 0:
+        s += 1; reasons.append(f"近10日涨{r['chg10']:.1f}%，中期走强")
+    # 价格在合理区间（5-30元，更容易拉涨停）
+    if pd.notna(r["price"]) and 5 <= r["price"] <= 30:
+        s += 1; reasons.append(f"股价{r['price']:.1f}元，盘子适中易拉升")
+    return s, reasons
+
+limit_up_candidates = []
+for r in rows:
+    s, reasons = 涨停预测分(r)
+    if s >= 5:  # 涨停潜力分≥5分
+        limit_up_candidates.append((s, r, reasons))
+limit_up_candidates.sort(reverse=True, key=lambda x: x[0])
+limit_up_top = limit_up_candidates[:5]  # 取前5只
+print(f"涨停预测：找到 {len(limit_up_candidates)} 只潜力股，取前 {len(limit_up_top)} 只")
+
 # ============ 7. 组装结果（含买卖点） ============
 print("正在逐只拉历史K线算买卖点（约半分钟）...")
 out = []
@@ -224,12 +262,26 @@ for s, r, why in top:
         "trade": trade,
     })
 
+# ============ 7.5 组装涨停预测结果 ============
+limit_up_out = []
+for s, r, reasons in limit_up_top:
+    price = r["price"]
+    limit_up_out.append({
+        "code": str(r["code"]), "name": str(r.get("name", "")),
+        "price": round(price, 2),
+        "chg": round(r["chg"], 2) if pd.notna(r["chg"]) else None,
+        "lb": round(r["lb"], 2) if pd.notna(r["lb"]) else None,
+        "hsl": round(r["hsl"], 2) if pd.notna(r["hsl"]) else None,
+        "score": s, "reasons": reasons,
+    })
+
 now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
 # 保存数据备份 data.json
 with open("data.json", "w", encoding="utf-8") as f:
     json.dump({"updated": now, "source": src, "budget": BUDGET,
-               "count": len(out), "candidates": out}, f, ensure_ascii=False, indent=2)
+               "count": len(out), "candidates": out,
+               "limit_up_picks": limit_up_out}, f, ensure_ascii=False, indent=2)
 
 # ============ 8. 生成手机友好页面 index.html ============
 def esc(x):
@@ -399,6 +451,31 @@ html_doc = f"""<!DOCTYPE html>
   ② 点"记录买入"，输入实际成交价格<br>
   ③ 系统自动帮你盯止盈止损，到点提醒你<br>
   <span style="color:#d32f2f;font-size:12px;">⚠️ 新手提醒：先小钱练手，别重仓！</span>
+</div>
+
+<!-- 今日涨停预计 -->
+<div style="margin:14px 0;padding:14px;background:linear-gradient(135deg,#ff6b6b,#ee5a24);border-radius:12px;color:#fff;">
+  <div style="font-size:16px;font-weight:bold;margin-bottom:10px;">🔥 今日涨停预计（短线潜力股）</div>
+  <div style="font-size:12px;opacity:0.9;margin-bottom:10px;">以下是根据资金面、技术面筛选的今日涨停潜力股，仅供参考，不构成投资建议</div>
+  {''.join(f'''
+  <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:10px;margin-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div><b>{esc(r['name'])}</b> <span style="font-size:11px;opacity:0.8;">{esc(r['code'])}</span></div>
+      <div style="text-align:right;">
+        <div style="font-size:18px;font-weight:bold;">¥{r['price']:.2f}</div>
+        <div style="font-size:12px;">{fmt_pct(r['chg'])}</div>
+      </div>
+    </div>
+    <div style="font-size:11px;margin-top:6px;opacity:0.95;">
+      <b>推荐理由：</b><br>
+      {''.join('· ' + esc(reason) + '<br>' for reason in r['reasons'])}
+    </div>
+    <div style="margin-top:6px;font-size:11px;opacity:0.8;">
+      量比 {r['lb'] if r['lb'] else '--'} · 换手 {r['hsl'] if r['hsl'] else '--'}% · 涨停潜力分 {r['score']}分
+    </div>
+  </div>
+  ''' for r in limit_up_out)}
+  <div style="font-size:11px;opacity:0.8;text-align:center;margin-top:6px;">⚠️ 涨停预测仅供参考，实际走势受多种因素影响，注意风险</div>
 </div>
 
 <div class="search-box">
