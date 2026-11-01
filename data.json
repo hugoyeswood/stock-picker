@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-01 16:33",
+  "updated": "2026-11-01 16:48",
   "source": "腾讯",
   "budget": 1000.0,
   "count": 20,
@@ -245,7 +245,12 @@
           }
         ],
         "limit_up": 10.37,
-        "limit_down": 8.49
+        "limit_down": 8.49,
+        "trend_24h": "看多",
+        "trend_reason": "均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨4.3%",
+        "expect_up": 10.05,
+        "expect_down": 9.49,
+        "trend_confidence": "高"
       }
     },
     {
@@ -489,7 +494,12 @@
           }
         ],
         "limit_up": 10.07,
-        "limit_down": 8.24
+        "limit_down": 8.24,
+        "trend_24h": "看多",
+        "trend_reason": "均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨5.9%",
+        "expect_up": 9.59,
+        "expect_down": 9.05,
+        "trend_confidence": "高"
       }
     },
     {
@@ -733,7 +743,12 @@
           }
         ],
         "limit_up": 8.06,
-        "limit_down": 6.6
+        "limit_down": 6.6,
+        "trend_24h": "看多",
+        "trend_reason": "均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨10.2%",
+        "expect_up": 7.72,
+        "expect_down": 7.36,
+        "trend_confidence": "高"
       }
     },
     {
@@ -977,7 +992,12 @@
           }
         ],
         "limit_up": 8.02,
-        "limit_down": 6.56
+        "limit_down": 6.56,
+        "trend_24h": "偏空震荡",
+        "trend_reason": "均线向下但价格反弹至MA5附近，近5日涨跌+2.2%，反弹力度待确认",
+        "expect_up": 7.72,
+        "expect_down": 7.36,
+        "trend_confidence": "中"
       }
     },
     {
@@ -1221,7 +1241,12 @@
           }
         ],
         "limit_up": 6.13,
-        "limit_down": 5.01
+        "limit_down": 5.01,
+        "trend_24h": "偏空震荡",
+        "trend_reason": "均线向下但价格反弹至MA5附近，近5日涨跌+6.6%，反弹力度待确认",
+        "expect_up": 5.82,
+        "expect_down": 5.5,
+        "trend_confidence": "中"
       }
     },
     {
@@ -1465,7 +1490,12 @@
           }
         ],
         "limit_up": 5.8,
-        "limit_down": 4.74
+        "limit_down": 4.74,
+        "trend_24h": "看多",
+        "trend_reason": "均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨6.4%",
+        "expect_up": 5.54,
+        "expect_down": 5.12,
+        "trend_confidence": "高"
       }
     },
     {
@@ -1709,7 +1739,12 @@
           }
         ],
         "limit_up": 5.72,
-        "limit_down": 4.68
+        "limit_down": 4.68,
+        "trend_24h": "看多",
+        "trend_reason": "均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨1.9%",
+        "expect_up": 5.43,
+        "expect_down": 5.09,
+        "trend_confidence": "高"
       }
     },
     {
@@ -1953,7 +1988,12 @@
           }
         ],
         "limit_up": 4.74,
-        "limit_down": 3.88
+        "limit_down": 3.88,
+        "trend_24h": "看多",
+        "trend_reason": "均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨10.9%",
+        "expect_up": 4.72,
+        "expect_down": 4.42,
+        "trend_confidence": "高"
       }
     },
     {
@@ -2197,7 +2237,12 @@
           }
         ],
         "limit_up": 3.81,
-        "limit_down": 3.11
+        "limit_down": 3.11,
+        "trend_24h": "偏空震荡",
+        "trend_reason": "均线向下但价格反弹至MA5附近，近5日涨跌+4.9%，反弹力度待确认",
+        "expect_up": 3.69,
+        "expect_down": 3.55,
+        "trend_confidence": "中"
       }
     },
     {
@@ -2441,7 +2486,12 @@
           }
         ],
         "limit_up": 3.16,
-        "limit_down": 2.58
+        "limit_down": 2.58,
+        "trend_24h": "偏空震荡",
+        "trend_reason": "均线向下但价格反弹至MA5附近，近5日涨跌+7.1%，反弹力度待确认",
+        "expect_up": 3.09,
+        "expect_down": 2.97,
+        "trend_confidence": "中"
       }
     },
     {
@@ -2685,7 +2735,12 @@
           }
         ],
         "limit_up": 10.76,
-        "limit_down": 8.8
+        "limit_down": 8.8,
+        "trend_24h": "看多",
+        "trend_reason": "均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨6.3%",
+        "expect_up": 10.22,
+        "expect_down": 9.76,
+        "trend_confidence": "高"
       }
     },
     {
@@ -2929,7 +2984,12 @@
           }
         ],
         "limit_up": 10.64,
-        "limit_down": 8.7
+        "limit_down": 8.7,
+        "trend_24h": "看多",
+        "trend_reason": "均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨7.6%",
+        "expect_up": 10.22,
+        "expect_down": 9.66,
+        "trend_confidence": "高"
       }
     },
     {
@@ -3173,7 +3233,12 @@
           }
         ],
         "limit_up": 9.93,
-        "limit_down": 8.13
+        "limit_down": 8.13,
+        "trend_24h": "看多",
+        "trend_reason": "均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨8.9%",
+        "expect_up": 10.19,
+        "expect_down": 9.67,
+        "trend_confidence": "高"
       }
     },
     {
@@ -3417,7 +3482,12 @@
           }
         ],
         "limit_up": 9.7,
-        "limit_down": 7.94
+        "limit_down": 7.94,
+        "trend_24h": "偏空震荡",
+        "trend_reason": "均线向下但价格反弹至MA5附近，近5日涨跌+2.9%，反弹力度待确认",
+        "expect_up": 9.21,
+        "expect_down": 8.71,
+        "trend_confidence": "中"
       }
     },
     {
@@ -3661,7 +3731,12 @@
           }
         ],
         "limit_up": 9.53,
-        "limit_down": 7.79
+        "limit_down": 7.79,
+        "trend_24h": "偏多震荡",
+        "trend_reason": "均线向上但价格回踩MA5，近5日涨跌-1.5%，需观察能否企稳",
+        "expect_up": 9.26,
+        "expect_down": 8.6,
+        "trend_confidence": "中"
       }
     },
     {
@@ -3905,7 +3980,12 @@
           }
         ],
         "limit_up": 9.75,
-        "limit_down": 7.97
+        "limit_down": 7.97,
+        "trend_24h": "偏多震荡",
+        "trend_reason": "均线向上但价格回踩MA5，近5日涨跌+1.3%，需观察能否企稳",
+        "expect_up": 9.07,
+        "expect_down": 8.71,
+        "trend_confidence": "中"
       }
     },
     {
@@ -4149,7 +4229,12 @@
           }
         ],
         "limit_up": 9.42,
-        "limit_down": 7.7
+        "limit_down": 7.7,
+        "trend_24h": "看多",
+        "trend_reason": "均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨7.2%",
+        "expect_up": 8.82,
+        "expect_down": 8.44,
+        "trend_confidence": "高"
       }
     },
     {
@@ -4393,7 +4478,12 @@
           }
         ],
         "limit_up": 8.94,
-        "limit_down": 7.32
+        "limit_down": 7.32,
+        "trend_24h": "偏空震荡",
+        "trend_reason": "均线向下但价格反弹至MA5附近，近5日涨跌+4.5%，反弹力度待确认",
+        "expect_up": 8.51,
+        "expect_down": 8.05,
+        "trend_confidence": "中"
       }
     },
     {
@@ -4637,7 +4727,12 @@
           }
         ],
         "limit_up": 8.73,
-        "limit_down": 7.15
+        "limit_down": 7.15,
+        "trend_24h": "看多",
+        "trend_reason": "均线多头排列(MA5>MA20)，价格在MA5上方，近5日涨3.7%",
+        "expect_up": 8.2,
+        "expect_down": 7.9,
+        "trend_confidence": "高"
       }
     },
     {
@@ -4881,7 +4976,12 @@
           }
         ],
         "limit_up": 8.56,
-        "limit_down": 7.0
+        "limit_down": 7.0,
+        "trend_24h": "偏空震荡",
+        "trend_reason": "均线向下但价格反弹至MA5附近，近5日涨跌+1.4%，反弹力度待确认",
+        "expect_up": 8.07,
+        "expect_down": 7.71,
+        "trend_confidence": "中"
       }
     }
   ],
