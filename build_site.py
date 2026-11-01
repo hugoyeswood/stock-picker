@@ -410,19 +410,132 @@ html_doc = f"""<!DOCTYPE html>
 <script>
 if ('serviceWorker' in navigator) {{ navigator.serviceWorker.register('./service-worker.js'); }}
 
-// 搜索股票功能
+// 全网搜索股票功能
+let searchTimer = null;
 function searchStocks() {{
-  const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-  const cards = document.querySelectorAll('#stockCards .card');
-  cards.forEach(card => {{
-    const name = card.querySelector('.name')?.textContent.toLowerCase() || '';
-    const code = card.querySelector('.code')?.textContent.toLowerCase() || '';
-    if (!keyword || name.includes(keyword) || code.includes(keyword)) {{
-      card.style.display = '';
-    }} else {{
-      card.style.display = 'none';
+  const keyword = document.getElementById('searchInput').value.trim();
+  clearTimeout(searchTimer);
+  if (!keyword) {{
+    // 清空搜索，显示全部卡片
+    document.querySelectorAll('#stockCards .card').forEach(card => card.style.display = '');
+    const searchResult = document.getElementById('searchResult');
+    if (searchResult) searchResult.style.display = 'none';
+    return;
+  }}
+  // 延迟300ms，避免频繁请求
+  searchTimer = setTimeout(async () => {{
+    try {{
+      // 调用腾讯搜索API
+      const resp = await fetch('https://smartbox.gtimg.cn/s3/?v=2&q=' + encodeURIComponent(keyword) + '&t=all');
+      const text = await resp.text();
+      // 解析返回数据：v_hint="sh603697~有友食品~sh~603697~..."
+      const match = text.match(/v_hint="([^"]+)"/);
+      if (!match || !match[1]) {{
+        showSearchResult([]);
+        return;
+      }}
+      const items = match[1].split('^');
+      const results = [];
+      items.forEach(item => {{
+        const parts = item.split('~');
+        if (parts.length >= 4 && parts[0] && parts[1]) {{
+          results.push({{
+            code: parts[0],
+            name: parts[1],
+            market: parts[2]
+          }});
+        }}
+      }});
+      showSearchResult(results.slice(0, 10)); // 只显示前10个结果
+    }} catch(e) {{
+      console.log('搜索失败', e);
+      showSearchResult([]);
     }}
+  }}, 300);
+}}
+
+function showSearchResult(results) {{
+  let div = document.getElementById('searchResult');
+  if (!div) {{
+    div = document.createElement('div');
+    div.id = 'searchResult';
+    div.style.cssText = 'margin:10px 0;border:1px solid #ddd;border-radius:8px;background:#fff;overflow:hidden;';
+    document.querySelector('.search-box').after(div);
+  }}
+  if (!results.length) {{
+    div.style.display = 'none';
+    return;
+  }}
+  div.style.display = 'block';
+  let html = '';
+  results.forEach(r => {{
+    html += '<div onclick="showStockDetail(\'' + r.code + '\',\'' + r.name + '\')" style="padding:10px 14px;border-bottom:1px solid #eee;cursor:pointer;" onmouseover="this.style.background=\'#f5f5f5\'" onmouseout="this.style.background=\'\'">';
+    html += '<b>' + r.name + '</b> <span style="color:#666;font-size:12px;margin-left:8px;">' + r.code + '</span>';
+    html += '</div>';
   }});
+  div.innerHTML = html;
+}}
+
+// 显示股票详细行情
+async function showStockDetail(code, name) {{
+  try {{
+    const resp = await fetch('https://qt.gtimg.cn/q=' + code);
+    const text = await resp.text();
+    const parts = text.split('~');
+    if (parts.length < 35) return;
+    const price = parseFloat(parts[3]);
+    const chg = parseFloat(parts[32]);
+    const open = parseFloat(parts[5]);
+    const high = parseFloat(parts[33]);
+    const low = parseFloat(parts[34]);
+    const prevClose = parseFloat(parts[4]);
+    const limitUp = (prevClose * 1.1).toFixed(2);
+    const limitDown = (prevClose * 0.9).toFixed(2);
+    
+    // 弹出详情
+    const chgColor = chg >= 0 ? '#c62828' : '#2e7d32';
+    const html = 
+      '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;display:flex;align-items:center;justify-content:center;">' +
+      '<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+      '<div><h2 style="margin:0;font-size:18px;">' + name + '</h2>' +
+      '<div style="color:#666;font-size:12px;">' + code + '</div></div>' +
+      '<button onclick="closeStockDetail()" style="background:#eee;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;">×</button>' +
+      '</div>' +
+      '<div style="text-align:center;margin:20px 0;">' +
+      '<div style="font-size:36px;font-weight:bold;color:' + chgColor + ';">¥' + price.toFixed(2) + '</div>' +
+      '<div style="color:' + chgColor + ';font-size:16px;">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">' +
+      '<div>今开：¥' + open.toFixed(2) + '</div>' +
+      '<div>昨收：¥' + prevClose.toFixed(2) + '</div>' +
+      '<div>最高：¥' + high.toFixed(2) + '</div>' +
+      '<div>最低：¥' + low.toFixed(2) + '</div>' +
+      '<div style="color:#c62828;">涨停：¥' + limitUp + '</div>' +
+      '<div style="color:#2e7d32;">跌停：¥' + limitDown + '</div>' +
+      '</div>' +
+      '<div style="margin-top:20px;display:flex;gap:10px;">' +
+      '<button onclick="recordTrade(\'buy\',\'' + code + '\',\'' + name + '\',' + price + ')" style="flex:1;padding:12px;background:#c62828;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录买入</button>' +
+      '<button onclick="recordTrade(\'sell\',\'' + code + '\',\'' + name + '\',' + price + ')" style="flex:1;padding:12px;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">记录卖出</button>' +
+      '</div>' +
+      '</div></div>';
+    
+    let div = document.getElementById('stockDetailModal');
+    if (!div) {{
+      div = document.createElement('div');
+      div.id = 'stockDetailModal';
+      document.body.appendChild(div);
+    }}
+    div.innerHTML = html;
+    div.style.display = 'block';
+  }} catch(e) {{
+    alert('获取行情失败，请重试');
+  }}
+}}
+
+function closeStockDetail() {{
+  const div = document.getElementById('stockDetailModal');
+  if (div) div.style.display = 'none';
 }}
 
 // 交易记录功能（存在手机本地）
