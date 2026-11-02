@@ -350,13 +350,16 @@ try:
         st_cards += f'  <div class="st-line">📈 涨值巅峰线：<b style="color:#2e7d32;">{stake}元</b> · 🛡 跌停锋线：<b style="color:#c62828;">{sstop}元</b></div>'
         st_cards += f'  <div class="st-ref">买入区间 <b>{sbuy}</b> · 止损 <b>{sstop}</b> · 止盈 <b>{stake}</b></div>'
         st_cards += f'</div>'
-    short_term_html = (f'<div class="card short-term">'
+    st_ts = esc(str(rec.get("ts", "")))
+    ts_part = f" 目录更新 {st_ts}" if st_ts else ""
+    short_term_html = (f'<div id="stRecContainer">'
+        f'<div class="card short-term">'
         f'  <div class="card-top"><div class="name">📈 今日短线推荐</div>'
-        f'    <div class="st-date">更新 {st_date}</div></div>'
+        f'    <div class="st-date">{st_date}{ts_part} · 每15分钟刷新</div></div>'
         f'  <div class="st-summary"><b>市场综述：</b>{st_summary}</div>'
         f'  {st_cards}'
         f'  <div class="st-note">⚠️ {st_note}</div>'
-        f'</div>')
+        f'</div></div>')
 except Exception:
     short_term_html = ""
 
@@ -569,6 +572,46 @@ function refreshWatch(){
 function holdTimer(){ refreshHoldings(); updatePnL(); monitorAlerts(); refreshWatch(); refreshRealtime(); }
 setInterval(holdTimer, 2000); // 持仓信息每2秒更新
 setTimeout(holdTimer, 500);  // 页面加载后先刷一次
+// ===== 今日短线推荐目录：每15分钟fetch最新JSON重渲染（确保可买+短线高增长） =====
+function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function renderShortTerm(j){
+  var now=new Date();
+  var dateTxt=escHtml(j.date||''), tsTxt=escHtml(j.ts||'');
+  var html='<div class="card short-term"><div class="card-top"><div class="name">📈 今日短线推荐</div><div class="st-date">'+dateTxt+' 目录更新 '+(tsTxt?tsTxt:'--')+' · 每15分钟刷新</div></div>';
+  html+='<div class="st-summary"><b>市场综述：</b>'+escHtml(j.market_summary||'')+'</div>';
+  var budget=getBudget();
+  (j.stocks||[]).forEach(function(s){
+    var p=parseFloat(s.price), chg=parseFloat(s.chg);
+    var up=chg>=0, scol=up?'#c62828':'#2e7d32';
+    var canBuy=!isNaN(p)&&p*100<=budget;
+    var badge=canBuy?'<span class="st-badge">✓ 可买</span>':'<span class="st-badge" style="background:#ef6c00;">⚠️ 资金不足</span>';
+    var priceTxt=isNaN(p)?'--':'¥'+p.toFixed(2);
+    var chgTxt=isNaN(chg)?'--':((up?'+':'')+chg.toFixed(2)+'%');
+    html+='<div class="st-item"><div class="st-top"><b style="color:#1a237e;">'+escHtml(s.name)+'</b>'+
+      badge+'<span class="st-code">'+escHtml(s.code)+'</span>'+
+      '<span class="st-price price" data-code="'+escHtml(s.code)+'" style="color:'+scol+';">'+priceTxt+'</span> '+
+      '<span class="st-chg chg" data-code="'+escHtml(s.code)+'">'+chgTxt+'</span></div>'+
+      '<div class="st-reason">✅ 可买理由：'+escHtml(s.reason||'--')+'</div>'+
+      '<div class="st-qty">📌 建议买入股数：<b style="color:#c62828;">'+escHtml(s.qty||'--')+'</b></div>'+
+      '<div class="st-line">📈 涨值巅峰线：<b style="color:#2e7d32;">'+escHtml(s.take_profit||'--')+'元</b> · 🛡 跌停锋线：<b style="color:#c62828;">'+escHtml(s.stop_loss||'--')+'元</b></div>'+
+      '<div class="st-ref">买入区间 <b>'+escHtml(s.buy_range||'--')+'</b> · 止损 <b>'+escHtml(s.stop_loss||'--')+'</b> · 止盈 <b>'+escHtml(s.take_profit||'--')+'</b></div></div>';
+  });
+  html+='<div class="st-note">⚠️ '+escHtml(j.note||'模拟交易仅记录本地，不构成投资建议；短线风险高，控制仓位')+'</div></div>';
+  return html;
+}
+function refreshShortTerm(){
+  var el=document.getElementById('stRecContainer'); if(!el) return;
+  fetch('short_term_rec.json?v='+Date.now()).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+    if(!j||!j.stocks) return;
+    var d=new Date();
+    var todayStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if(j.date&&j.date!==todayStr) return; // 只渲染当天目录
+    el.innerHTML=renderShortTerm(j);
+    _priceMap=null; // 新渲染元素需重新收集，价格继续每秒刷新
+  }).catch(function(){ /* 网络失败保留现有目录 */ });
+}
+setTimeout(refreshShortTerm, 2500);   // 页面加载后先拉一次
+setInterval(refreshShortTerm, 900000); // 每15分钟更新推荐目录
 // ===== 持仓操作：加仓/减仓/清仓/卖出盈利点 =====
 function doHoldOp(code,name,price,op){
   if(op==='buyMore') buyMore(code,name,price);
