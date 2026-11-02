@@ -900,7 +900,11 @@ html_doc = f"""<!DOCTYPE html>
 <link rel="icon" href="icons/icon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
-<title>今日候选清单</title>
+<title>今日候选清单 · 实时行情与买卖建议</title>
+<meta property="og:title" content="股票短线优选 · 实时行情与大师买卖建议">
+<meta property="og:description" content="每日短线推荐、涨值巅峰线预判、大师级买卖抛售逻辑、模拟交易。打开即用，微信内也可直接访问。">
+<meta property="og:image" content="https://hugoyeswood.github.io/stock-picker/icons/icon-512.png">
+<meta property="og:url" content="https://hugoyeswood.github.io/stock-picker/">
 <style>
   * {{ box-sizing:border-box; margin:0; padding:0; }}
   body {{ font-family:"Microsoft YaHei", system-ui, sans-serif; background:#f0f2f5;
@@ -954,6 +958,10 @@ html_doc = f"""<!DOCTYPE html>
   .w-hint {{ font-size:12px; color:#888; margin-top:6px; }}
   .foot {{ font-size:11px; color:#999; text-align:center; margin-top:16px; line-height:1.6; }}
 {EXTRA_CSS}</style></head><body>
+<div id="wxTip" style="display:none;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:10px;">📱 已在微信内打开，功能完整可用；如需全屏/横屏体验，点右上角「···」→「在浏览器打开」</div>
+<script>
+(function(){{ try{{ if(/MicroMessenger/i.test(navigator.userAgent)){{ var t=document.getElementById('wxTip'); if(t) t.style.display='block'; }} }}catch(e){{}} }})();
+</script>
 <h1>今日候选清单</h1>
 <div class="sub">更新于 {now} · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f}</div>
 <div id="marketStatus" class="market-badge" style="display:none"></div>
