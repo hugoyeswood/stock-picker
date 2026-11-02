@@ -569,7 +569,7 @@ function refreshWatch(){
   });
   el.innerHTML=any?html:'<div class="h-empty">暂无波动异动：关注标的涨跌幅≥4%时自动推荐</div>';
 }
-function holdTimer(){ refreshHoldings(); updatePnL(); monitorAlerts(); refreshWatch(); refreshRealtime(); }
+function holdTimer(){ refreshHoldings(); updatePnL(); monitorAlerts(); refreshWatch(); refreshRealtime(); renderHoldAdvice(); }
 setInterval(holdTimer, 2000); // 持仓信息每2秒更新
 setTimeout(holdTimer, 500);  // 页面加载后先刷一次
 // ===== 今日短线推荐目录：每15分钟fetch最新JSON重渲染（确保可买+短线高增长） =====
@@ -612,6 +612,71 @@ function refreshShortTerm(){
 }
 setTimeout(refreshShortTerm, 2500);   // 页面加载后先拉一次
 setInterval(refreshShortTerm, 900000); // 每15分钟更新推荐目录
+// ===== 持仓着重关注：每小时抛售/加仓提示 =====
+// 信号矩阵（对每只持仓股，现价用每秒实时缓存 _lastPrice）：
+//   抛售SELL：现价≤止损线×1.02（逼近跌停峰值）| 现价≥止盈目标（涨值巅峰落袋）| 当日涨幅≥9.5%（接近涨停锁利）
+//            | 当日涨幅≥5%且累计盈利≥8%（冲高锁利）| 当日跌幅≤-5%（趋势转弱止损）
+//   加仓ADD ：累计浮亏≤-4%且当日温和回调-3%~0%（未破止损，分批摊薄）| 现价在成本±2%内且当日温和上行0~3%（启动在即）
+//            | 现价仍低于成本但当日反弹+2%~+6%（反弹确认）
+//   其余HOLD：持有观望
+function holdAdviceFor(h){
+  var p=_lastPrice[h.code]||0; if(!p||isNaN(p)) return null;
+  var cost=h.cost/h.qty;
+  var s=loadHS()[h.code]||{};
+  var sl=s.sl?parseFloat(s.sl):cost*0.95;
+  var tp=s.tp?parseFloat(s.tp):cost*1.10;
+  var chg=_lastChg[h.code]||0; if(isNaN(chg)) chg=0;
+  var pnlPct=(p-cost)/cost*100;
+  var advice=null, why='';
+  if(p<=sl*1.02){ advice='SELL'; why='现价¥'+p.toFixed(2)+'已逼近跌停峰值（止损线¥'+sl.toFixed(2)+'），风险扩大，建议立即抛售离场'; }
+  else if(p>=tp){ advice='SELL'; why='现价¥'+p.toFixed(2)+'已达上涨预估¥'+tp.toFixed(2)+'，短线目标达成，建议止盈抛售落袋'; }
+  else if(chg>=9.5){ advice='SELL'; why='今日涨幅'+chg.toFixed(2)+'%接近涨停，短线获利丰厚，建议抛售锁定利润'; }
+  else if(chg>=5&&pnlPct>=8){ advice='SELL'; why='今日大涨'+chg.toFixed(2)+'%、累计盈利'+pnlPct.toFixed(1)+'%，短线冲高建议抛售锁利'; }
+  else if(chg<=-5){ advice='SELL'; why='今日跌幅已达'+chg.toFixed(2)+'%，趋势转弱，建议止损抛售避免深套'; }
+  else if(p>sl*1.02&&pnlPct<=-4&&pnlPct>=-6&&chg>=-3&&chg<=0){ advice='ADD'; why='回调至成本下方'+(-pnlPct).toFixed(1)+'%（未破止损线、未深套），今日温和回调'+chg.toFixed(2)+'%，可分批加仓摊低成本'; }
+  else if(pnlPct>=-2&&pnlPct<=2&&chg>=0&&chg<=3){ advice='ADD'; why='现价在成本附近（'+pnlPct.toFixed(1)+'%），今日温和上行'+chg.toFixed(2)+'%，启动在即，可加仓'; }
+  else if(p<=cost&&chg>=2&&chg<=6){ advice='ADD'; why='今日反弹+'+chg.toFixed(2)+'%但仍低于成本¥'+cost.toFixed(2)+'，反弹确认，可加仓'; }
+  return advice?{code:h.code,name:h.name,price:p,cost:cost,sl:sl,tp:tp,pnlPct:pnlPct,chg:chg,advice:advice,why:why}:null;
+}
+function renderHoldAdvice(){
+  var hs=getHoldings(); if(!hs.length) return;
+  hs.forEach(function(h){
+    var a=holdAdviceFor(h); if(!a) return;
+    var item=document.getElementById('pnl_'+h.code); if(!item) return;
+    var wrap=item.parentNode; if(!wrap) return;
+    var old=wrap.querySelector('.h-adv'); if(old) old.parentNode.removeChild(old);
+    var color=a.advice==='SELL'?'#c62828':'#2e7d32';
+    var tag=a.advice==='SELL'?'🚨 建议抛售':'➕ 建议加仓';
+    var div=document.createElement('div');
+    div.className='h-adv';
+    div.style.cssText='margin-top:6px;padding:4px 8px;border-radius:4px;font-size:12px;color:#fff;background:'+color+';';
+    div.textContent=tag+'：'+a.why;
+    wrap.appendChild(div);
+  });
+}
+function checkHourlyAdvice(){
+  var hs=getHoldings(); if(!hs.length) return;
+  var sell=[], add=[];
+  hs.forEach(function(h){
+    var a=holdAdviceFor(h);
+    if(a){ if(a.advice==='SELL') sell.push(a); else if(a.advice==='ADD') add.push(a); }
+  });
+  if(!sell.length&&!add.length) return;
+  var now=new Date();
+  var key=String(now.getFullYear())+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+String(now.getHours()).padStart(2,'0');
+  var last=''; try{ last=localStorage.getItem('myAdviceHour')||''; }catch(e){}
+  if(last===key) return; // 同一小时只提示一次
+  try{ localStorage.setItem('myAdviceHour', key); }catch(e){}
+  var msg='';
+  if(sell.length) msg+='🚨 建议抛售：'+sell.map(function(a){ return a.name+'（'+a.why+'）'; }).join('；')+'。';
+  if(add.length) msg+='➕ 建议加仓：'+add.map(function(a){ return a.name+'（'+a.why+'）'; }).join('；')+'。';
+  var bar=document.getElementById('alertBar');
+  if(bar){ bar.innerHTML='🕐 <b>每小时持仓提示：</b>'+msg+' <button data-close-alert="1">关闭</button>'; bar.style.display='block'; }
+  try{
+    if(Notification&&Notification.permission==='granted'){ new Notification('持仓抛售/加仓提示', {body:msg}); }
+  }catch(e){}
+}
+setInterval(checkHourlyAdvice, 60000); // 每分钟检查，命中新小时即汇总提示（每小时最多一次）
 // ===== 持仓操作：加仓/减仓/清仓/卖出盈利点 =====
 function doHoldOp(code,name,price,op){
   if(op==='buyMore') buyMore(code,name,price);
