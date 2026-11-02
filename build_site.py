@@ -458,7 +458,14 @@ function refreshHoldings(){
       '<div class="h-row">成本 <b>¥'+cost.toFixed(2)+'</b> · 现价 <b class="price" data-code="'+h.code+'">'+(lp?'¥'+lp.toFixed(2):'--')+'</b> <span class="chg" data-code="'+h.code+'" style="'+lcCol+'">'+lcTxt+'</span></div>'+
       '<div class="h-row">📈 上涨预估：<b style="color:#2e7d32;" data-edit="'+h.code+':tp" title="点击修改">¥'+tp.toFixed(2)+'（+'+tpPct+'%）</b></div>'+
       '<div class="h-row">🛡 跌停峰值：<b style="color:#c62828;" data-edit="'+h.code+':sl" title="点击修改">¥'+sl.toFixed(2)+'（'+slPct+'%）</b></div>'+
-      '<div class="h-pnl" id="pnl_'+h.code+'">--</div></div>';
+      '<div class="h-pnl" id="pnl_'+h.code+'">--</div>'+
+      (function(_a,_c,_q,_lp){
+        var r='';
+        if(_a){ if(_a.advice==='SELL') r='<div class="h-advice" style="color:#c62828;">🚨 操作建议：抛售（['+_a.rule+']'+_a.why+'）</div>';
+                else if(_a.advice==='ADD') r='<div class="h-advice" style="color:#2e7d32;">➕ 操作建议：加仓（['+_a.rule+']'+_a.why+'）</div>'; }
+        else if(_lp&&_c&&(_lp-_c)*_q<0){ r='<div class="h-advice" style="color:#2e7d32;">📌 操作建议：持有观望，守住止损线¥'+(_c*0.95).toFixed(2)+'</div>'; }
+        return r;
+      })(holdAdviceFor(h), cost, h.qty, lp)+'</div>';
   });
   el.innerHTML=html;
   _priceMap=null;
@@ -473,7 +480,7 @@ function updatePnL(){
     var cost=h.cost/h.qty;
     var pnl=(p-cost)*h.qty-h.fee;
     var pct=(p-cost)/cost*100;
-    pe.innerHTML='浮动盈亏 <b style="color:'+(pnl>=0?'#c62828':'#2e7d32')+';">'+(pnl>=0?'+':'')+pnl.toFixed(2)+'元（'+(pct>=0?'+':'')+pct.toFixed(2)+'%）</b> · 累计费用 ¥'+h.fee.toFixed(2);
+    pe.innerHTML='浮动盈亏 <b style="color:'+(pnl>=0?'#d4a017':'#2e7d32')+';font-weight:800;">'+(pnl>=0?'+':'')+pnl.toFixed(2)+'元</b>（<b style="color:'+(pnl>=0?'#c62828':'#2e7d32')+';">'+(pct>=0?'+':'')+pct.toFixed(2)+'%</b>） · 累计费用 ¥'+h.fee.toFixed(2);
   });
 }
 function monitorAlerts(){
@@ -569,7 +576,29 @@ function refreshWatch(){
   });
   el.innerHTML=any?html:'<div class="h-empty">暂无波动异动：关注标的涨跌幅≥4%时自动推荐</div>';
 }
-function holdTimer(){ refreshHoldings(); updatePnL(); monitorAlerts(); refreshWatch(); refreshRealtime(); renderHoldAdvice(); }
+// ===== 交易时段检测：闭市时整页灰色（持仓卡保持彩色） =====
+function isTradingTime(d){
+  d=d||new Date();
+  var day=d.getDay();
+  if(day===0||day===6) return false;               // 周末闭市
+  var m=d.getHours()*60+d.getMinutes();
+  return (m>=570&&m<=690)||(m>=780&&m<=900);       // 09:30-11:30 / 13:00-15:00
+}
+function updateMarketStatus(d){
+  var open=isTradingTime(d);
+  var el=document.getElementById('marketStatus');
+  document.body.classList.toggle('market-closed', !open);
+  if(el){
+    if(open){ el.style.display='none'; }
+    else{
+      el.style.display='flex';
+      el.innerHTML='🔒 已闭市 · 行情静止 · 持仓盈亏仍实时核算 · 下一交易日 09:30 开盘';
+    }
+  }
+}
+setTimeout(updateMarketStatus, 500);
+setInterval(updateMarketStatus, 30000); // 每30秒刷新闭市状态
+function holdTimer(){ refreshHoldings(); updatePnL(); monitorAlerts(); refreshWatch(); refreshRealtime(); }
 setInterval(holdTimer, 2000); // 持仓信息每2秒更新
 setTimeout(holdTimer, 500);  // 页面加载后先刷一次
 // ===== 今日短线推荐目录：每15分钟fetch最新JSON重渲染（确保可买+短线高增长） =====
@@ -795,6 +824,13 @@ html_doc = f"""<!DOCTYPE html>
               box-shadow:0 1px 3px rgba(0,0,0,.06); }}
   .stat b {{ display:block; font-size:20px; color:#1a237e; }}
   .stat span {{ font-size:11px; color:#888; }}
+  .gold {{ color:#d4a017; font-weight:800; }}
+  .market-badge {{ display:flex; align-items:center; gap:6px; background:#1a237e; color:#ffd54f; border-radius:8px;
+         padding:8px 12px; font-size:13px; margin-bottom:14px; }}
+  body.market-closed {{ filter:grayscale(0.85); }}
+  body.market-closed .card.holdings {{ filter:none; }}
+  body.market-closed #stockDetailModal, body.market-closed #holdOpsModal {{ filter:none; }}
+  .h-advice {{ margin-top:4px; font-size:12px; }}
   .card {{ background:#fff; border-radius:12px; padding:14px; margin-bottom:12px;
           box-shadow:0 1px 4px rgba(0,0,0,.07); }}
   .card-top {{ display:flex; justify-content:space-between; align-items:flex-start; }}
@@ -830,6 +866,7 @@ html_doc = f"""<!DOCTYPE html>
 {EXTRA_CSS}</style></head><body>
 <h1>今日候选清单</h1>
 <div class="sub">更新于 {now} · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f}</div>
+<div id="marketStatus" class="market-badge" style="display:none"></div>
 <div class="tip"><b>怎么用：</b>看卡片【状态】——"可买"按【建议买入区间】挂限价单买1手；"等回踩"别追高；"观望"先别碰。<br>
 买入后设好<b>止损</b>(跌到就走)和<b>止盈</b>(涨到落袋)。<b>提醒：</b>数据筛选，非投资建议；涨跌有风险，控制仓位。</div>
 {SEARCH_HTML}
