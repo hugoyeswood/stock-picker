@@ -361,7 +361,7 @@ except Exception:
     short_term_html = ""
 
 
-EXTRA_CSS = '\n  .search-box { display:flex; gap:8px; margin-bottom:10px; position:relative; }\n  .search-box input { flex:1; padding:11px 12px; border:1px solid #d0d0d0; border-radius:8px; font-size:14px; outline:none; }\n  .search-box input:focus { border-color:#1a237e; }\n  .search-box button { padding:11px 16px; background:#1a237e; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; }\n  #searchResult { display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; border:1px solid #ddd; border-radius:8px;\n                  background:#fff; box-shadow:0 4px 12px rgba(0,0,0,.15); z-index:1000; max-height:300px; overflow-y:auto; }\n  .budget-line { text-align:center; font-size:14px; color:#1a237e; background:#e8eaf6; border-radius:8px; padding:9px; margin-bottom:12px; }\n    .btn-chart { display:block; width:100%; margin:6px 0; padding:9px; background:#1a237e; color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer; }\n  .chart-container { margin-top:8px; border:1px solid #eee; border-radius:8px; padding:8px; background:#fafafa; }\n  .chart-title { font-size:12px; color:#666; margin-bottom:4px; }\n  .chart-container canvas { width:100%; height:200px; }\n  .trend-row { font-size:13px; }\n  .short-term { border:1px solid #ffd54f; }\n  .short-term .name { color:#e65100; }\n  .st-date { font-size:11px; color:#999; }\n  .st-summary { font-size:13px; color:#333; background:#fff8e1; border-radius:6px; padding:7px 10px; margin:6px 0; }\n  .st-item { border-top:1px dashed #eee; padding:8px 0; font-size:13px; }\n  .st-top { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }\n  .st-code { font-size:11px; color:#999; }\n  .st-badge { font-size:11px; color:#fff; background:#2e7d32; border-radius:4px; padding:1px 6px; margin-left:4px; }\n  .st-reason { color:#333; line-height:1.5; margin:3px 0; }\n  .st-ref { color:#555; font-size:12px; }\n  .st-line { font-size:13px; color:#333; margin:2px 0; }\n  .st-qty { font-size:13px; color:#333; margin:2px 0; }\n  .st-note { font-size:11px; color:#999; margin-top:8px; }\n  .advice { margin-top:14px; padding:10px; background:#fff8e1; border:1px solid #ffe082; border-radius:8px; font-size:13px; }\n  .advice-top { font-weight:bold; margin-bottom:4px; }\n  .advice-reason { color:#333; line-height:1.5; margin-bottom:4px; }\n  .advice-risk { color:#c62828; font-size:12px; }\n'
+EXTRA_CSS = '\n  .search-box { display:flex; gap:8px; margin-bottom:10px; position:relative; }\n  .search-box input { flex:1; padding:11px 12px; border:1px solid #d0d0d0; border-radius:8px; font-size:14px; outline:none; }\n  .search-box input:focus { border-color:#1a237e; }\n  .search-box button { padding:11px 16px; background:#1a237e; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; }\n  #searchResult { display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; border:1px solid #ddd; border-radius:8px;\n                  background:#fff; box-shadow:0 4px 12px rgba(0,0,0,.15); z-index:1000; max-height:300px; overflow-y:auto; }\n  .budget-line { text-align:center; font-size:14px; color:#1a237e; background:#e8eaf6; border-radius:8px; padding:9px; margin-bottom:12px; }\n    .btn-chart { display:block; width:100%; margin:6px 0; padding:9px; background:#1a237e; color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer; }\n  .chart-container { margin-top:8px; border:1px solid #eee; border-radius:8px; padding:8px; background:#fafafa; }\n  .chart-title { font-size:12px; color:#666; margin-bottom:4px; }\n  .chart-container canvas { width:100%; height:200px; }\n  .trend-row { font-size:13px; }\n  .short-term { border:1px solid #ffd54f; }\n  .short-term .name { color:#e65100; }\n  .st-date { font-size:11px; color:#999; }\n  .st-summary { font-size:13px; color:#333; background:#fff8e1; border-radius:6px; padding:7px 10px; margin:6px 0; }\n  .st-item { border-top:1px dashed #eee; padding:8px 0; font-size:13px; }\n  .st-top { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }\n  .st-code { font-size:11px; color:#999; }\n  .st-badge { font-size:11px; color:#fff; background:#2e7d32; border-radius:4px; padding:1px 6px; margin-left:4px; }\n  .st-reason { color:#333; line-height:1.5; margin:3px 0; }\n  .st-ref { color:#555; font-size:12px; }\n  .st-line { font-size:13px; color:#333; margin:2px 0; }\n  .st-qty { font-size:13px; color:#333; margin:2px 0; }\n  .st-note { font-size:11px; color:#999; margin-top:8px; }\n  .advice { margin-top:14px; padding:10px; background:#fff8e1; border:1px solid #ffe082; border-radius:8px; font-size:13px; }\n  .advice-top { font-weight:bold; margin-bottom:4px; }\n  .advice-reason { color:#333; line-height:1.5; margin-bottom:4px; }\n  .advice-risk { color:#c62828; font-size:12px; }\n  .holdings { border:1px solid #dbe4f7; }\n  .h-alert { display:none; background:#ffebee; border:1px solid #ef9a9a; color:#c62828; border-radius:8px; padding:8px 10px; margin:8px 0; font-size:13px; }\n  .h-toolbar { margin:6px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }\n  .h-notify { padding:7px 12px; background:#1a237e; color:#fff; border:none; border-radius:8px; font-size:12px; cursor:pointer; }\n  .h-tip { font-size:11px; color:#888; }\n  .h-item { border-top:1px dashed #eee; padding:8px 0; font-size:13px; }\n  .h-top { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }\n  .h-qty { font-size:11px; color:#1a237e; background:#e8eaf6; border-radius:4px; padding:1px 6px; }\n  .h-row { font-size:13px; color:#333; margin:3px 0; }\n  .h-row b { cursor:pointer; border-bottom:1px dashed #bbb; }\n  .h-pnl { font-size:12px; color:#555; margin-top:3px; }\n  .h-empty { color:#999; font-size:13px; padding:8px 0; text-align:center; }\n  .h-hint { font-size:11px; color:#999; margin-top:8px; }\n'
 SEARCH_HTML = '<div class="search-box">\n  <input type="text" id="searchInput" placeholder="输入股票代码/名称，全网搜索..." onkeydown="if(event.key===\'Enter\')searchStocks()">\n  <button onclick="searchStocks()">🔍 搜索</button>\n  <div id="searchResult"></div>\n</div>\n<div class="budget-line">可用资金 <b id="budgetDisplay" onclick="editBudget()" title="点击编辑">¥1000.00</b>（点我直接改，存本地）</div>\n'
 APP_JS_EXTRA = "\n// ===== 实时价格刷新（O(n)优化版：缓存DOM映射，避免每只股票全页扫描） =====\nvar _priceMap = null;\nfunction getPriceMap(){\n  if(_priceMap) return _priceMap;\n  _priceMap = { p:{}, c:{} };\n  document.querySelectorAll('.price[data-code]').forEach(function(el){ _priceMap.p[el.getAttribute('data-code')] = el; });\n  document.querySelectorAll('.chg[data-code]').forEach(function(el){ _priceMap.c[el.getAttribute('data-code')] = el; });\n  return _priceMap;\n}\nfunction refreshRealtime(){\n  var codes = [];\n  document.querySelectorAll('.price[data-code]').forEach(function(el){ codes.push(el.getAttribute('data-code')); });\n  if(!codes.length) return;\n  var m = getPriceMap();\n  var s = document.createElement('script');\n  s.src = 'https://qt.gtimg.cn/q=' + codes.join(',');\n  s.onload = function(){\n    try{\n      codes.forEach(function(code){\n        var data = window['v_' + code];\n        if(!data || typeof data !== 'string') return;\n        var parts = data.split('~');\n        if(parts.length < 35) return;\n        var price = parseFloat(parts[3]), chg = parseFloat(parts[32]);\n        if(!price || isNaN(price)) return;\n        var pe = m.p[code], ce = m.c[code];\n        if(pe) pe.textContent = '¥' + price.toFixed(2);\n        if(ce){ ce.textContent = (chg>=0?'+':'') + chg.toFixed(2) + '%'; ce.style.color = chg>=0 ? '#d32f2f' : '#2e7d32'; }\n      });\n    }catch(e){ console.log('实时解析失败', e); }\n    if(s.parentNode) s.parentNode.removeChild(s);\n  };\n  s.onerror = function(){ if(s.parentNode) s.parentNode.removeChild(s); };\n  document.body.appendChild(s);\n}\nsetInterval(refreshRealtime, 10000); // 每10秒刷新（比5秒省一半请求）\nsetTimeout(refreshRealtime, 1500);   // 页面加载后先刷一次\n\n// ===== K线图（canvas高清适配 devicePixelRatio） =====\nfunction toggleChart(chartId){\n  var chart = document.getElementById(chartId);\n  if(!chart) return;\n  if(chart.style.display === 'none'){ chart.style.display = 'block'; drawKLine(chartId.replace('chart_','')); }\n  else chart.style.display = 'none';\n}\nfunction drawKLine(code){\n  var canvas = document.getElementById('canvas_' + code);\n  var dataEl = document.getElementById('data_' + code);\n  if(!canvas || !dataEl) return;\n  var data;\n  try{ data = JSON.parse(dataEl.textContent); }catch(e){ return; }\n  if(!data || !data.length) return;\n  var dpr = window.devicePixelRatio || 1;\n  var w = canvas.clientWidth || canvas.width;\n  var h = 200;\n  canvas.width = w * dpr; canvas.height = h * dpr;\n  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';\n  var ctx = canvas.getContext('2d');\n  ctx.scale(dpr, dpr);\n  ctx.clearRect(0, 0, w, h);\n  var maxPrice = 0, minPrice = Infinity;\n  data.forEach(function(d){ if(d[3] > maxPrice) maxPrice = d[3]; if(d[4] < minPrice) minPrice = d[4]; });\n  var range = maxPrice - minPrice || 1;\n  var pad = 12, cw = w - pad*2, ch = h - pad*2;\n  var bw = cw / data.length * 0.6;\n  data.forEach(function(d, i){\n    var x = pad + (cw/data.length)*i + (cw/data.length - bw)/2;\n    var yo = pad + ch*(1-(d[1]-minPrice)/range);\n    var yc = pad + ch*(1-(d[2]-minPrice)/range);\n    var yh = pad + ch*(1-(d[3]-minPrice)/range);\n    var yl = pad + ch*(1-(d[4]-minPrice)/range);\n    var col = d[2] >= d[1] ? '#d32f2f' : '#2e7d32';\n    ctx.strokeStyle = col; ctx.fillStyle = col;\n    ctx.beginPath(); ctx.moveTo(x+bw/2, yh); ctx.lineTo(x+bw/2, yl); ctx.stroke();\n    var yTop = Math.min(yo, yc), bh = Math.max(Math.abs(yc-yo), 1);\n    ctx.fillRect(x, yTop, bw, bh);\n  });\n  ctx.fillStyle = '#666'; ctx.font = '10px sans-serif';\n  ctx.fillText(maxPrice.toFixed(2), 3, pad+8);\n  ctx.fillText(minPrice.toFixed(2), 3, h-2);\n}\n"
 
@@ -394,6 +394,136 @@ function buildAdvice(price,chg,outer,inner,avg,volRatio,turnover,limitUp,limitDo
     (risks.length?'<div class="advice-risk">⚠️ 风险：'+risks.join('；')+'</div>':'')+'</div>';
   return {verdict:verdict,color:color,reasons:reasons,risks:risks,html:html};
 }
+"""
+
+HOLD_HTML = """<div class="card holdings">
+  <div class="card-top"><div class="name">📊 我的持仓 · 实时跟进</div><div class="st-date">每10秒刷新</div></div>
+  <div class="h-alert" id="alertBar" style="display:none"></div>
+  <div class="h-toolbar"><button onclick="enableNotify()" class="h-notify">🔔 开启预警通知</button><span class="h-tip">点击数值可修改上涨预估/跌停峰值</span></div>
+  <div id="holdingsList"><div class="h-empty">暂无持仓：搜索买入后自动实时跟进</div></div>
+  <div class="h-hint">⚠️ 模拟交易仅记录本地，不构成投资建议；页面打开时跌近跌停峰值自动预警提醒</div>
+</div>"""
+
+APP_JS_HOLD = """\n// ===== 我的持仓：实时跟进 + 上涨预估 + 跌停峰值 + 跌近峰值预警 =====
+function loadHS(){ try{ return JSON.parse(localStorage.getItem('myHS')||'{}'); }catch(e){ return {}; } }
+function saveHS(o){ localStorage.setItem('myHS', JSON.stringify(o)); }
+function loadAlerts(){ try{ return JSON.parse(localStorage.getItem('myAlerts')||'{}'); }catch(e){ return {}; } }
+function saveAlerts(o){ localStorage.setItem('myAlerts', JSON.stringify(o)); }
+function getHoldings(){
+  var trades=getTrades(), h={};
+  trades.forEach(function(t){
+    if(!h[t.code]) h[t.code]={code:t.code,name:t.name,qty:0,cost:0,fee:0};
+    if(t.type==='buy'){ h[t.code].qty+=t.qty; h[t.code].cost+=t.amount; h[t.code].fee+=t.fee; }
+    else if(t.type==='sell'){ if(h[t.code].qty>0){ var _avg=h[t.code].cost/h[t.code].qty; h[t.code].cost-=_avg*t.qty; } h[t.code].qty-=t.qty; h[t.code].fee+=t.fee; }
+  });
+  var out=[];
+  for(var k in h){ if(h[k]&&h[k].qty>0) out.push(h[k]); }
+  return out;
+}
+function editLine(code,kind){
+  var hs=getHoldings(), one=null;
+  hs.forEach(function(x){ if(x.code===code) one=x; });
+  if(!one) return;
+  var cost=one.cost/one.qty;
+  var s=loadHS()[code]||{};
+  var cur=kind==='tp'?(s.tp||(cost*1.10).toFixed(2)):(s.sl||(cost*0.95).toFixed(2));
+  var v=prompt(kind==='tp'?'输入上涨预估（止盈目标价）：':'输入跌停峰值（止损价）：', cur);
+  if(!v||isNaN(v)||parseFloat(v)<=0) return;
+  var hs2=loadHS(); hs2[code]=hs2[code]||{}; hs2[code][kind]=parseFloat(v).toFixed(2); saveHS(hs2);
+  refreshHoldings();
+}
+function refreshHoldings(){
+  var hs=getHoldings(), el=document.getElementById('holdingsList');
+  if(!el) return;
+  if(!hs.length){ el.innerHTML='<div class="h-empty">暂无持仓：搜索买入后自动实时跟进</div>'; return; }
+  var s=loadHS();
+  var html='';
+  hs.forEach(function(h){
+    var cost=h.cost/h.qty;
+    var tp=s[h.code]&&s[h.code].tp?parseFloat(s[h.code].tp):cost*1.10;
+    var sl=s[h.code]&&s[h.code].sl?parseFloat(s[h.code].sl):cost*0.95;
+    var tpPct=((tp-cost)/cost*100).toFixed(1), slPct=((sl-cost)/cost*100).toFixed(1);
+    html+='<div class="h-item">'+
+      '<div class="h-top"><b>'+h.name+'</b><span class="st-code">'+h.code+'</span><span class="h-qty">持仓 '+h.qty+'股</span></div>'+
+      '<div class="h-row">成本 <b>¥'+cost.toFixed(2)+'</b> · 现价 <b class="price" data-code="'+h.code+'">--</b> <span class="chg" data-code="'+h.code+'"></span></div>'+
+      '<div class="h-row">📈 上涨预估：<b style="color:#2e7d32;" data-edit="'+h.code+':tp" title="点击修改">¥'+tp.toFixed(2)+'（+'+tpPct+'%）</b></div>'+
+      '<div class="h-row">🛡 跌停峰值：<b style="color:#c62828;" data-edit="'+h.code+':sl" title="点击修改">¥'+sl.toFixed(2)+'（'+slPct+'%）</b></div>'+
+      '<div class="h-pnl" id="pnl_'+h.code+'">--</div></div>';
+  });
+  el.innerHTML=html;
+}
+function updatePnL(){
+  var hs=getHoldings();
+  hs.forEach(function(h){
+    var el=document.querySelector('.price[data-code="'+h.code+'"]');
+    var pe=document.getElementById('pnl_'+h.code);
+    if(!el||!pe) return;
+    var p=parseFloat(el.textContent.replace('¥',''));
+    if(!p||isNaN(p)) return;
+    var cost=h.cost/h.qty;
+    var pnl=(p-cost)*h.qty-h.fee;
+    var pct=(p-cost)/cost*100;
+    pe.innerHTML='浮动盈亏 <b style="color:'+(pnl>=0?'#c62828':'#2e7d32')+';">'+(pnl>=0?'+':'')+pnl.toFixed(2)+'元（'+(pct>=0?'+':'')+pct.toFixed(2)+'%）</b> · 累计费用 ¥'+h.fee.toFixed(2);
+  });
+}
+function monitorAlerts(){
+  var hs=getHoldings(); if(!hs.length) return;
+  var s=loadHS(), alerts=loadAlerts(), now=Date.now(), hits=[];
+  hs.forEach(function(h){
+    var el=document.querySelector('.price[data-code="'+h.code+'"]');
+    if(!el) return;
+    var p=parseFloat(el.textContent.replace('¥',''));
+    if(!p||isNaN(p)) return;
+    var cost=h.cost/h.qty;
+    var sl=s[h.code]&&s[h.code].sl?parseFloat(s[h.code].sl):cost*0.95;
+    var tp=s[h.code]&&s[h.code].tp?parseFloat(s[h.code].tp):cost*1.10;
+    var line=sl*1.02;
+    var a=alerts[h.code]||{};
+    if(p<=line && !(a.sl && now-a.sl<1800000)){
+      hits.push({code:h.code,name:h.name,price:p,sl:sl,line:line,tp:tp});
+      a.sl=now; alerts[h.code]=a;
+    }
+    var pe=document.getElementById('pnl_'+h.code);
+    if(pe&&p>=tp&&!(a.tp && now-a.tp<1800000)){ pe.innerHTML='🎯 已到上涨预估（¥'+tp.toFixed(2)+'），考虑止盈落袋'; a.tp=now; alerts[h.code]=a; }
+  });
+  if(hits.length){ saveAlerts(alerts); fireAlert(hits); }
+}
+function fireAlert(hits){
+  var bar=document.getElementById('alertBar');
+  var msg=hits.map(function(x){ return x.name+' 现价¥'+x.price.toFixed(2)+' 已逼近跌停峰值¥'+x.sl.toFixed(2)+'（距止损2%内）'; }).join('；');
+  if(bar){ bar.innerHTML='🚨 <b>预警：</b>'+msg+' <button data-close-alert="1">关闭</button>'; bar.style.display='block'; }
+  try{
+    if(Notification&&Notification.permission==='granted'){
+      new Notification('⚠️ 跌停峰值预警', {body:msg});
+    }
+  }catch(e){}
+  try{
+    var ac=new (window.AudioContext||window.webkitAudioContext)();
+    var o=ac.createOscillator(), g=ac.createGain();
+    o.connect(g); g.connect(ac.destination); o.frequency.value=880;
+    g.gain.setValueAtTime(0.3, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+0.6);
+    o.start(); o.stop(ac.currentTime+0.6);
+  }catch(e){}
+}
+function enableNotify(){
+  if(!('Notification' in window)){ alert('当前浏览器不支持通知，已用页面内红色预警代替'); return; }
+  Notification.requestPermission().then(function(p){
+    if(p==='granted') alert('✅ 预警通知已开启：价格跌近跌停峰值时会在通知栏提醒（页面需保持打开）');
+    else if(p==='denied') alert('❌ 通知被拒绝，仍会用页面内红色预警');
+    else alert('通知权限未确认，仍会用页面内红色预警');
+  }).catch(function(){ alert('请求通知权限失败，仍会用页面内红色预警'); });
+}
+document.addEventListener('click', function(e){
+  var t=e.target;
+  if(t&&t.getAttribute){
+    var ed=t.getAttribute('data-edit');
+    if(ed){ var p=ed.split(':'); editLine(p[0], p[1]); return; }
+    if(t.getAttribute('data-close-alert')){ var bar=document.getElementById('alertBar'); if(bar) bar.style.display='none'; return; }
+  }
+});
+function holdTimer(){ refreshHoldings(); updatePnL(); monitorAlerts(); }
+setInterval(holdTimer, 10000);
+setTimeout(holdTimer, 2000);
 """
 
 
@@ -464,6 +594,7 @@ html_doc = f"""<!DOCTYPE html>
   <div><b>{sum(1 for x in out if x['trade']['state']=='可买')}</b><span>"可买"数量</span></div>
 </div>
 {wallet_html}
+{HOLD_HTML}
 {cards}
 <div class="foot">状态依据：现价 vs 20日均线、离5日均线远近；买入区间=现价与MA5之间。<br>
 资金账户：本地 python add_fund.py 转入资金后重新部署 · 添加到主屏幕即可像App一样用 · 每天收盘后自动更新</div>
@@ -471,6 +602,7 @@ html_doc = f"""<!DOCTYPE html>
 {APP_JS}
 {APP_JS_EXTRA}
 {APP_JS_ADVICE}
+{APP_JS_HOLD}
 if ('serviceWorker' in navigator) {{ navigator.serviceWorker.register('./service-worker.js'); }}
 </script>
 </body></html>"""
