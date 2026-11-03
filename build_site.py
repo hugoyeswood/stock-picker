@@ -635,14 +635,9 @@ function isTradingTime(d){
 function updateMarketStatus(d){
   var open=isTradingTime(d);
   var el=document.getElementById('marketStatus');
-  document.body.classList.toggle('market-closed', !open);
-  if(el){
-    if(open){ el.style.display='none'; }
-    else{
-      el.style.display='flex';
-      el.innerHTML='🔒 已闭市 · 行情静止 · 持仓盈亏仍实时核算 · 下一交易日 09:30 开盘';
-    }
-  }
+  // 暂时去除灰界面：闭市时也不加灰色滤镜、不显示闭市横幅（保留行情逻辑）
+  document.body.classList.remove('market-closed');
+  if(el){ el.style.display='none'; }
 }
 setTimeout(updateMarketStatus, 500);
 setInterval(updateMarketStatus, 30000); // 每30秒刷新闭市状态
