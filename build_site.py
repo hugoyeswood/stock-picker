@@ -353,6 +353,8 @@ try:
         st_cards += f'  <div class="st-ops"><button class="st-buy" data-stbuy="1" data-code="{sc}" data-name="{sn}" data-price="{sp_t.replace("¥", "") if sp_t not in ("--","") else 0}">📥 买入</button></div>'
         st_cards += f'</div>'
     st_ts = esc(str(rec.get("ts", "")))
+    if not st_ts:
+        st_ts = now  # short_term_rec.json 缺 ts 时用本次生成时间兜底，避免显示"目录更新 --"
     ts_part = f" 目录更新 {st_ts}" if st_ts else ""
     short_term_html = (f'<div id="stRecContainer">'
         f'<div class="card short-term">'
@@ -668,7 +670,7 @@ function hasHolding(code){
 }
 function renderShortTerm(j){
   var dateTxt=escHtml(j.date||''), tsTxt=escHtml(j.ts||'');
-  var html='<div class="card short-term"><div class="card-top"><div class="name">📈 今日短线推荐</div><div class="st-date">'+dateTxt+' 目录更新 '+(tsTxt?tsTxt:'--')+' · 每15分钟刷新</div></div>';
+  var html='<div class="card short-term"><div class="card-top"><div class="name">📈 今日短线推荐</div><div class="st-date">'+dateTxt+' 目录更新 '+(tsTxt?tsTxt:'最新')+' · 每15分钟刷新</div></div>';
   html+='<div class="st-summary"><b>市场综述：</b>'+escHtml(j.market_summary||'')+'</div>';
   var budget=getBudget();
   // 短期优选置顶：按“预判1-2天盈利空间”降序（涨值巅峰线相对现价空间），空间相同按当日涨幅
