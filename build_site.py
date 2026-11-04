@@ -368,7 +368,7 @@ except Exception:
     short_term_html = ""
 
 
-EXTRA_CSS = '\n  .ui-mask{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;}\n  .ui-box{background:#fff;border-radius:12px;padding:18px 16px;width:92%;max-width:340px;box-shadow:0 8px 30px rgba(0,0,0,.25);}\n  .ui-title{font-size:15px;font-weight:700;color:#1a237e;margin-bottom:10px;text-align:center;}\n  .ui-input{width:100%;box-sizing:border-box;padding:10px;font-size:14px;border:1px solid #d0d0d0;border-radius:8px;margin:6px 0 4px;}\n  .ui-input:focus{outline:none;border-color:#1a237e;}\n  .ui-msg{font-size:13px;color:#333;line-height:1.6;margin:6px 0;text-align:center;white-space:pre-wrap;}\n  .ui-btns{display:flex;gap:10px;margin-top:14px;}\n  .ui-btn{flex:1;padding:10px 0;border:none;border-radius:8px;font-size:14px;cursor:pointer;}\n  .ui-btn-ok{background:#1a237e;color:#fff;}\n  .ui-btn-cancel{background:#eee;color:#555;}\n  .search-box { display:flex; gap:8px; margin-bottom:10px; position:relative; }\n  .search-box input { flex:1; padding:11px 12px; border:1px solid #d0d0d0; border-radius:8px; font-size:14px; outline:none; }\n  .search-box input:focus { border-color:#1a237e; }\n  .search-box button { padding:11px 16px; background:#1a237e; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; }\n  #searchResult { display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; border:1px solid #ddd; border-radius:8px;\n                  background:#fff; box-shadow:0 4px 12px rgba(0,0,0,.15); z-index:1000; max-height:300px; overflow-y:auto; }\n  .budget-panel { font-size:13px; color:#1a237e; background:#e8eaf6; border-radius:8px; padding:10px 12px; margin-bottom:12px; }\n  .budget-panel .fp-row { display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; gap:8px; }\n  .budget-panel .fp-lab { color:#555; font-size:12px; flex-shrink:0; }\n  .budget-panel .fp-val { font-weight:700; text-align:right; }\n  .budget-panel .fp-total { border-top:1px solid #c5cae9; margin-top:4px; padding-top:7px; font-size:14px; }\n  .budget-panel b { cursor:pointer; border-bottom:1px dashed #9fa8da; }\n  .fp-gold { color:#c9a227; font-weight:800; text-shadow:0 0 1px rgba(255,215,0,.6); }\n  .fp-blackgold { color:#8b6914; font-weight:800; }\n  .fp-darkgreen { color:#006400; font-weight:800; }\n    .btn-chart { display:block; width:100%; margin:6px 0; padding:9px; background:#1a237e; color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer; }\n  .chart-container { margin-top:8px; border:1px solid #eee; border-radius:8px; padding:8px; background:#fafafa; }\n  .chart-title { font-size:12px; color:#666; margin-bottom:4px; }\n  .chart-container canvas { width:100%; height:200px; }\n  .trend-row { font-size:13px; }\n  .short-term { border:1px solid #ffd54f; }\n  .short-term .name { color:#e65100; }\n  .st-date { font-size:11px; color:#999; }\n  .st-summary { font-size:13px; color:#333; background:#fff8e1; border-radius:6px; padding:7px 10px; margin:6px 0; }\n  .st-item { border-top:1px dashed #eee; padding:8px 0; font-size:13px; }\n  .st-top { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }\n  .st-code { font-size:11px; color:#999; }\n  .st-badge { font-size:11px; color:#fff; background:#2e7d32; border-radius:4px; padding:1px 6px; margin-left:4px; }\n  .st-reason { color:#333; line-height:1.5; margin:3px 0; }\n  .st-ref { color:#555; font-size:12px; }\n  .st-hot { border:1.5px solid #ffd54f; background:#fffde7; }\n  .st-hot-badge { font-size:11px; color:#fff; background:#e65100; border-radius:4px; padding:1px 6px; margin-left:4px; }\n  .st-space { font-size:12px; font-weight:bold; margin-left:4px; }\n  .st-warn { font-size:12px; margin-top:3px; }\n  .st-ops { margin-top:5px; display:flex; gap:8px; }\n  .st-buy { padding:6px 16px; background:#c62828; color:#fff; border:none; border-radius:12px; font-size:12px; cursor:pointer; }\n  .st-sell { padding:6px 16px; background:#2e7d32; color:#fff; border:none; border-radius:12px; font-size:12px; cursor:pointer; }\n  .st-line { font-size:13px; color:#333; margin:2px 0; }\n  .st-qty { font-size:13px; color:#333; margin:2px 0; }\n  .st-note { font-size:11px; color:#999; margin-top:8px; }\n  .advice { margin-top:14px; padding:10px; background:#fff8e1; border:1px solid #ffe082; border-radius:8px; font-size:13px; }\n  .advice-top { font-weight:bold; margin-bottom:4px; }\n  .advice-reason { color:#333; line-height:1.5; margin-bottom:4px; }\n  .advice-risk { color:#c62828; font-size:12px; }\n  .holdings { border:1px solid #dbe4f7; }\n  .h-alert { display:none; background:#ffebee; border:1px solid #ef9a9a; color:#c62828; border-radius:8px; padding:8px 10px; margin:8px 0; font-size:13px; }\n  .h-toolbar { margin:6px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }\n  .h-notify { padding:7px 12px; background:#1a237e; color:#fff; border:none; border-radius:8px; font-size:12px; cursor:pointer; }\n  .h-bak { padding:7px 12px; background:#00695c; color:#fff; border:none; border-radius:8px; font-size:12px; cursor:pointer; }\n  .h-tip { font-size:11px; color:#888; }\n  .h-item { border-top:1px dashed #eee; padding:8px 0; font-size:13px; }\n  .h-top { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }\n  .h-qty { font-size:11px; color:#1a237e; background:#e8eaf6; border-radius:4px; padding:1px 6px; }\n  .h-row { font-size:13px; color:#333; margin:3px 0; }\n  .h-row b { cursor:pointer; border-bottom:1px dashed #bbb; }\n  .h-pnl { font-size:12px; color:#555; margin-top:3px; }\n  .h-empty { color:#999; font-size:13px; padding:8px 0; text-align:center; }\n  .h-hint { font-size:11px; color:#999; margin-top:8px; }\n  .h-ops { padding:3px 10px; background:#fff; border:1px solid #1a237e; color:#1a237e; border-radius:12px; font-size:11px; cursor:pointer; margin-left:auto; }\n  .w-card { border:1px solid #dbe4f7; }\n  .w-item { border-top:1px dashed #eee; padding:8px 0; font-size:13px; cursor:pointer; display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }\n  .w-chg { font-weight:bold; font-size:12px; }\n  .w-tip { font-size:11px; color:#666; width:100%; }\n'
+EXTRA_CSS = '\n  .ui-mask{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;}\n  .ui-box{background:#fff;border-radius:12px;padding:18px 16px;width:92%;max-width:340px;box-shadow:0 8px 30px rgba(0,0,0,.25);}\n  .ui-title{font-size:15px;font-weight:700;color:#1a237e;margin-bottom:10px;text-align:center;}\n  .ui-input{width:100%;box-sizing:border-box;padding:10px;font-size:14px;border:1px solid #d0d0d0;border-radius:8px;margin:6px 0 4px;}\n  .ui-input:focus{outline:none;border-color:#1a237e;}\n  .ui-msg{font-size:13px;color:#333;line-height:1.6;margin:6px 0;text-align:center;white-space:pre-wrap;}\n  .ui-btns{display:flex;gap:10px;margin-top:14px;}\n  .ui-btn{flex:1;padding:10px 0;border:none;border-radius:8px;font-size:14px;cursor:pointer;}\n  .ui-btn-ok{background:#1a237e;color:#fff;}\n  .ui-btn-cancel{background:#eee;color:#555;}\n  .search-box { display:flex; gap:8px; margin-bottom:10px; position:relative; }\n  .search-box input { flex:1; padding:11px 12px; border:1px solid #d0d0d0; border-radius:8px; font-size:14px; outline:none; }\n  .search-box input:focus { border-color:#1a237e; }\n  .search-box button { padding:11px 16px; background:#1a237e; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; }\n  #searchResult { display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; border:1px solid #ddd; border-radius:8px;\n                  background:#fff; box-shadow:0 4px 12px rgba(0,0,0,.15); z-index:1000; max-height:300px; overflow-y:auto; }\n  .budget-panel { font-size:13px; color:#1a237e; background:#e8eaf6; border-radius:8px; padding:10px 12px; margin-bottom:12px; }\n  .budget-panel .fp-row { display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; gap:8px; }\n  .budget-panel .fp-lab { color:#555; font-size:12px; flex-shrink:0; }\n  .budget-panel .fp-val { font-weight:700; text-align:right; }\n  .budget-panel .fp-total { border-top:1px solid #c5cae9; margin-top:4px; padding-top:7px; font-size:14px; }\n  .budget-panel b { cursor:pointer; border-bottom:1px dashed #9fa8da; }\n  .fp-gold { color:#c9a227; font-weight:800; text-shadow:0 0 1px rgba(255,215,0,.6); }\n  .fp-blackgold { color:#8b6914; font-weight:800; }\n  .fp-darkgreen { color:#006400; font-weight:800; }\n    .btn-chart { display:block; width:100%; margin:6px 0; padding:9px; background:#1a237e; color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer; }\n  .chart-container { margin-top:8px; border:1px solid #eee; border-radius:8px; padding:8px; background:#fafafa; }\n  .chart-title { font-size:12px; color:#666; margin-bottom:4px; }\n  .chart-container canvas { width:100%; height:200px; }\n  .trend-row { font-size:13px; }\n  .short-term { border:1px solid #ffd54f; }\n  .short-term .name { color:#e65100; }\n  .st-date { font-size:11px; color:#999; }\n  .st-summary { font-size:13px; color:#333; background:#fff8e1; border-radius:6px; padding:7px 10px; margin:6px 0; }\n  .st-item { border-top:1px dashed #eee; padding:8px 0; font-size:13px; }\n  .st-top { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }\n  .st-code { font-size:11px; color:#999; }\n  .st-badge { font-size:11px; color:#fff; background:#2e7d32; border-radius:4px; padding:1px 6px; margin-left:4px; }\n  .st-reason { color:#333; line-height:1.5; margin:3px 0; }\n  .st-ref { color:#555; font-size:12px; }\n  .st-hot { border:1.5px solid #ffd54f; background:#fffde7; }\n  .st-hot-badge { font-size:11px; color:#fff; background:#e65100; border-radius:4px; padding:1px 6px; margin-left:4px; }\n  .st-space { font-size:12px; font-weight:bold; margin-left:4px; }\n  .st-warn { font-size:12px; margin-top:3px; }\n  .st-ops { margin-top:5px; display:flex; gap:8px; }\n  .st-buy { padding:6px 16px; background:#c62828; color:#fff; border:none; border-radius:12px; font-size:12px; cursor:pointer; }\n  .st-sell { padding:6px 16px; background:#2e7d32; color:#fff; border:none; border-radius:12px; font-size:12px; cursor:pointer; }\n  .st-line { font-size:13px; color:#333; margin:2px 0; }\n  .st-qty { font-size:13px; color:#333; margin:2px 0; }\n  .st-note { font-size:11px; color:#999; margin-top:8px; }\n  .advice { margin-top:14px; padding:10px; background:#fff8e1; border:1px solid #ffe082; border-radius:8px; font-size:13px; }\n  .advice-top { font-weight:bold; margin-bottom:4px; }\n  .advice-reason { color:#333; line-height:1.5; margin-bottom:4px; }\n  .advice-risk { color:#c62828; font-size:12px; }\n  .holdings { border:1px solid #dbe4f7; }\n  .h-alert { display:none; background:#ffebee; border:1px solid #ef9a9a; color:#c62828; border-radius:8px; padding:8px 10px; margin:8px 0; font-size:13px; }\n  .h-toolbar { margin:6px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }\n  .h-notify { padding:7px 12px; background:#1a237e; color:#fff; border:none; border-radius:8px; font-size:12px; cursor:pointer; }\n  .h-bak { padding:7px 12px; background:#00695c; color:#fff; border:none; border-radius:8px; font-size:12px; cursor:pointer; }\n  .h-tip { font-size:11px; color:#888; }\n  .h-item { border-top:1px dashed #eee; padding:8px 0; font-size:13px; }\n  .h-top { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }\n  .h-qty { font-size:11px; color:#1a237e; background:#e8eaf6; border-radius:4px; padding:1px 6px; }\n  .h-row { font-size:13px; color:#333; margin:3px 0; }\n  .h-row b { cursor:pointer; border-bottom:1px dashed #bbb; }\n  .h-pnl { font-size:12px; color:#555; margin-top:3px; }\n  .h-empty { color:#999; font-size:13px; padding:8px 0; text-align:center; }\n  .h-hint { font-size:11px; color:#999; margin-top:8px; }\n  .h-ops { padding:3px 10px; background:#fff; border:1px solid #1a237e; color:#1a237e; border-radius:12px; font-size:11px; cursor:pointer; margin-left:auto; }\n  .w-card { border:1px solid #dbe4f7; }\n  .w-item { border-top:1px dashed #eee; padding:8px 0; font-size:13px; cursor:pointer; display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }\n  .w-chg { font-weight:bold; font-size:12px; }\n  .w-tip { font-size:11px; color:#666; width:100%; }\n\n/* ===== 升级版 v2：Tab 分区导航 + 深蓝金主题 ===== */\n  .tabs { display:flex; gap:6px; margin:0 0 14px; position:sticky; top:0; background:#f0f2f5; padding:8px 0; z-index:50; }\n  .tab-btn { flex:1; padding:10px 4px; border:none; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;\n             background:#fff; color:#1a237e; box-shadow:0 1px 3px rgba(0,0,0,.08); transition:all .15s; }\n  .tab-btn.active { background:#1a237e; color:#ffd54f; box-shadow:0 2px 8px rgba(26,35,126,.35); }\n  .tab-page { display:none; }\n  .tab-page.active { display:block; }\n  .ver-badge { display:inline-block; background:#1a237e; color:#ffd54f; border-radius:6px; padding:1px 8px; font-size:11px; margin-left:6px; }\n  .err-banner { display:none; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:8px; padding:8px 10px; font-size:12px; margin-bottom:10px; }\n  .btn-primary { padding:8px 18px; background:#c62828; color:#fff; border:none; border-radius:10px; font-size:13px; cursor:pointer; }\n  .btn-green { padding:8px 18px; background:#2e7d32; color:#fff; border:none; border-radius:10px; font-size:13px; cursor:pointer; }\n  .btn-navy { padding:8px 18px; background:#1a237e; color:#ffd54f; border:none; border-radius:10px; font-size:13px; cursor:pointer; }\n  .quick-ops { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }\n  .quick-ops button { flex:1; min-width:100px; }\n  .h-toolbar { margin:6px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }\n  .h-toolbar button { padding:7px 12px; border:none; border-radius:8px; font-size:12px; cursor:pointer; }\n  .h-notify { background:#1a237e; color:#fff; }\n  .h-bak { background:#00695c; color:#fff; }\n  .modal-btn { flex:1; padding:12px; border:none; border-radius:8px; font-size:14px; cursor:pointer; }\n  .modal-btn.buy { background:#c62828; color:#fff; }\n  .modal-btn.sell { background:#2e7d32; color:#fff; }\n  .modal-btn.gray { background:#eee; color:#555; }\n  @media (max-width:420px) { .tab-btn { font-size:12px; padding:9px 2px; } }'
 SEARCH_HTML = '<div class="search-box">\n  <input type="text" id="searchInput" placeholder="输入股票代码/名称，全网搜索..." onkeydown="if(event.key===\'Enter\')searchStocks()">\n  <button onclick="searchStocks()">🔍 搜索</button>\n  <div id="searchResult"></div>\n</div>\n<div class="budget-panel" id="fundPanel"></div>\n'
 APP_JS_EXTRA = "\n// ===== 实时价格刷新（O(n)优化版：缓存DOM映射，避免每只股票全页扫描） =====\nvar _lastPrice = {}, _lastChg = {}, _lastVol = {}, _lastTr = {}, _lastAmp = {}, _lastAvg = {}, _lastHigh = {}, _lastLow = {}, _lastO = {}, _lastI = {}, _lastPrev = {};\nvar _priceMap = null;\nfunction getPriceMap(){\n  if(_priceMap) return _priceMap;\n  _priceMap = { p:{}, c:{} };\n  document.querySelectorAll('.price[data-code]').forEach(function(el){ _priceMap.p[el.getAttribute('data-code')] = el; });\n  document.querySelectorAll('.chg[data-code]').forEach(function(el){ _priceMap.c[el.getAttribute('data-code')] = el; });\n  return _priceMap;\n}\nfunction refreshRealtime(){\n  var codes = [];\n  document.querySelectorAll('.price[data-code]').forEach(function(el){ var c=el.getAttribute('data-code'); if(codes.indexOf(c)<0) codes.push(c); });\n  var wl=collectWatchCodes(); wl.forEach(function(x){ if(codes.indexOf(x.code)<0) codes.push(x.code); });\n  if(!codes.length) return;\n  var m = getPriceMap();\n  var s = document.createElement('script');\n  s.src = 'https://qt.gtimg.cn/q=' + codes.join(',');\n  s.onload = function(){\n    try{\n      codes.forEach(function(code){\n        var data = window['v_' + code];\n        if(!data || typeof data !== 'string') return;\n        var parts = data.split('~');\n        if(parts.length < 35) return;\n        var price = parseFloat(parts[3]), chg = parseFloat(parts[32]);\n        if(!price || isNaN(price)) return;\n        var pe = m.p[code], ce = m.c[code];\n        _lastPrice[code] = price; _lastChg[code] = chg; _lastPrev[code] = parseFloat(parts[4]); _lastVol[code] = parseFloat(parts[49]); _lastTr[code] = parseFloat(parts[38]); _lastAmp[code] = parseFloat(parts[43]); _lastAvg[code] = parseFloat(parts[51]); _lastHigh[code] = parseFloat(parts[33]); _lastLow[code] = parseFloat(parts[34]); _lastO[code] = parseFloat(parts[7]); _lastI[code] = parseFloat(parts[8]);\n        if(pe) pe.textContent = '¥' + price.toFixed(2);\n        if(ce){ ce.textContent = (chg>=0?'+':'') + chg.toFixed(2) + '%'; ce.style.color = chg>=0 ? '#d32f2f' : '#2e7d32'; }\n      });\n    }catch(e){ console.log('实时解析失败', e); }\n    if(s.parentNode) s.parentNode.removeChild(s);\n  };\n  s.onerror = function(){ if(s.parentNode) s.parentNode.removeChild(s); };\n  document.body.appendChild(s);\n}\nsetInterval(refreshRealtime, 1000); // 每支股票每秒更新现价\nsetTimeout(refreshRealtime, 300);    // 页面加载后先刷一次\n\n// ===== K线图（canvas高清适配 devicePixelRatio） =====\nfunction toggleChart(chartId){\n  var chart = document.getElementById(chartId);\n  if(!chart) return;\n  if(chart.style.display === 'none'){ chart.style.display = 'block'; drawKLine(chartId.replace('chart_','')); }\n  else chart.style.display = 'none';\n}\nfunction drawKLine(code){\n  var canvas = document.getElementById('canvas_' + code);\n  var dataEl = document.getElementById('data_' + code);\n  if(!canvas || !dataEl) return;\n  var data;\n  try{ data = JSON.parse(dataEl.textContent); }catch(e){ return; }\n  if(!data || !data.length) return;\n  var dpr = window.devicePixelRatio || 1;\n  var w = canvas.clientWidth || canvas.width;\n  var h = 200;\n  canvas.width = w * dpr; canvas.height = h * dpr;\n  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';\n  var ctx = canvas.getContext('2d');\n  ctx.scale(dpr, dpr);\n  ctx.clearRect(0, 0, w, h);\n  var maxPrice = 0, minPrice = Infinity;\n  data.forEach(function(d){ if(d[3] > maxPrice) maxPrice = d[3]; if(d[4] < minPrice) minPrice = d[4]; });\n  var range = maxPrice - minPrice || 1;\n  var pad = 12, cw = w - pad*2, ch = h - pad*2;\n  var bw = cw / data.length * 0.6;\n  data.forEach(function(d, i){\n    var x = pad + (cw/data.length)*i + (cw/data.length - bw)/2;\n    var yo = pad + ch*(1-(d[1]-minPrice)/range);\n    var yc = pad + ch*(1-(d[2]-minPrice)/range);\n    var yh = pad + ch*(1-(d[3]-minPrice)/range);\n    var yl = pad + ch*(1-(d[4]-minPrice)/range);\n    var col = d[2] >= d[1] ? '#d32f2f' : '#2e7d32';\n    ctx.strokeStyle = col; ctx.fillStyle = col;\n    ctx.beginPath(); ctx.moveTo(x+bw/2, yh); ctx.lineTo(x+bw/2, yl); ctx.stroke();\n    var yTop = Math.min(yo, yc), bh = Math.max(Math.abs(yc-yo), 1);\n    ctx.fillRect(x, yTop, bw, bh);\n  });\n  // 收盘价折线（叠加在K线上，蓝色）\n  ctx.strokeStyle = 'rgba(26,35,126,0.8)'; ctx.lineWidth = 1.5; ctx.beginPath();\n  data.forEach(function(d, i){\n    var x = pad + (cw/data.length)*i + (cw/data.length - bw)/2 + bw/2;\n    var yc = pad + ch*(1-(d[2]-minPrice)/range);\n    if(i===0) ctx.moveTo(x, yc); else ctx.lineTo(x, yc);\n  });\n  ctx.stroke(); ctx.lineWidth = 1;\n  ctx.fillStyle = '#666'; ctx.font = '10px sans-serif';\n  ctx.fillText(maxPrice.toFixed(2), 3, pad+8);\n  ctx.fillText(minPrice.toFixed(2), 3, h-2);\n  ctx.fillStyle = 'rgba(26,35,126,0.9)';\n  ctx.fillText('—— 收盘价', w-70, pad+8);\n}\n"
 
@@ -894,6 +894,57 @@ function sellAll(code,name,price){
 }
 """
 
+APP_JS_UI = """// ===== 升级版 v2：Tab 分区导航 + 全局错误兜底 + 按钮可用性自检 =====
+function switchTab(id){
+  var tabs=document.querySelectorAll('.tab-page');
+  for(var i=0;i<tabs.length;i++){ tabs[i].className = tabs[i].id===id ? 'tab-page active' : 'tab-page'; }
+  var btns=document.querySelectorAll('.tab-btn');
+  for(var j=0;j<btns.length;j++){ var b=btns[j]; b.className = b.getAttribute('data-tab')===id ? 'tab-btn active' : 'tab-btn'; }
+  try{ if(id==='tabHold'){ refreshHoldings(); updatePnL(); } if(id==='tabFund'){ refreshFundPanel(); } if(id==='tabCand'){ _priceMap=null; refreshRealtime(); } }catch(e){}
+}
+(function(){
+  // Tab 点击委托（ES5，兼容老内核）
+  document.addEventListener('click', function(e){
+    var t=e.target;
+    while(t && t!==document.body){
+      if(t.getAttribute && t.getAttribute('data-tab')){ switchTab(t.getAttribute('data-tab')); return; }
+      t=t.parentNode;
+    }
+  });
+  // 全局错误兜底：JS 异常不再静默，顶部红条提示（不阻断功能）
+  window.onerror = function(msg, src, line){
+    try{
+      var bar=document.getElementById('errBanner');
+      if(bar){ bar.style.display='block';
+        bar.innerHTML='⚠️ 页面运行提示：'+String(msg).slice(0,80)+'（行'+line+'）· 数据与功能仍在运行';
+        setTimeout(function(){ bar.style.display='none'; }, 8000);
+      }
+    }catch(e){}
+    return false;
+  };
+  // 按钮可用性自检：遍历所有带 onclick / data-* 的可点元素，检查对应全局函数是否存在
+  function selfCheckButtons(){
+    var missing=[];
+    var all=document.querySelectorAll('[onclick]');
+    for(var i=0;i<all.length;i++){
+      var oc=(all[i].getAttribute('onclick')||'').match(/^\\s*(\\w+)\\s*\\(/);
+      if(oc && typeof window[oc[1]]!=='function'){ missing.push(oc[1]); }
+    }
+    var checks=['buyWithBudget','recordTrade','searchStocks','showStockDetail','toggleChart','openHoldOps','editPrincipal','editBudget','exportBackup','importBackup','showMonthReport','enableNotify','refreshShortTerm','refreshHoldings','refreshRealtime','refreshFundPanel'];
+    for(var k=0;k<checks.length;k++){
+      if(typeof window[checks[k]]!=='function') missing.push(checks[k]);
+    }
+    var el=document.getElementById('selfCheck');
+    if(el){
+      el.textContent = missing.length ? '⚠️ 自检发现缺失函数：'+missing.join('、') : '✅ 全部按钮链路自检通过（'+checks.length+'项）';
+      el.style.color = missing.length ? '#c62828' : '#2e7d32';
+    }
+  }
+  setTimeout(selfCheckButtons, 1500);
+})();
+"""
+
+
 
 html_doc = f"""<!DOCTYPE html>
 <html lang="zh"><head><meta charset="utf-8">
@@ -903,7 +954,7 @@ html_doc = f"""<!DOCTYPE html>
 <link rel="icon" href="icons/icon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
-<title>今日候选清单 · 实时行情与买卖建议</title>
+<title>今日候选清单 · 实时行情与买卖建议（升级版）</title>
 <meta property="og:title" content="股票短线优选 · 实时行情与大师买卖建议">
 <meta property="og:description" content="每日短线推荐、涨值巅峰线预判、大师级买卖抛售逻辑、模拟交易。打开即用，微信内也可直接访问。">
 <meta property="og:image" content="https://hugoyeswood.github.io/stock-picker/icons/icon-512.png">
@@ -965,25 +1016,42 @@ html_doc = f"""<!DOCTYPE html>
 <script>
 (function(){{ try{{ if(/MicroMessenger/i.test(navigator.userAgent)){{ var t=document.getElementById('wxTip'); if(t) t.style.display='block'; }} }}catch(e){{}} }})();
 </script>
-<h1>今日候选清单</h1>
-<div class="sub">更新于 {now} · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f} · <b style="color:#1a237e;">版本 v20261104-ES5</b></div>
+<h1>今日候选清单 <span class="ver-badge">升级版 V2</span></h1>
+<div class="sub">更新于 {now} · 数据源：{esc(src)} · 当前可用资金 ¥{BUDGET:.2f} <span class="ver-badge">v20261104-V2-ES5</span></div>
+<div id="errBanner" class="err-banner"></div>
 <div id="marketStatus" class="market-badge" style="display:none"></div>
 <div class="tip"><b>怎么用：</b>看卡片【状态】——"可买"按【建议买入区间】挂限价单买1手；"等回踩"别追高；"观望"先别碰。<br>
 买入后设好<b>止损</b>(跌到就走)和<b>止盈</b>(涨到落袋)。<b>提醒：</b>数据筛选，非投资建议；涨跌有风险，控制仓位。</div>
-{SEARCH_HTML}
-{short_term_html}
-<div class="stat">
-  <div><b>{len(out)}</b><span>今日候选</span></div>
-  <div><b>{len(pool)}</b><span>买得起的候选</span></div>
-  <div><b>{sum(1 for x in out if x['trade']['state']=='可买')}</b><span>"可买"数量</span></div>
+<div class="tabs" id="mainTabs">
+  <button class="tab-btn active" data-tab="tabRec">📈 今日推荐</button>
+  <button class="tab-btn" data-tab="tabCand">🔥 候选清单</button>
+  <button class="tab-btn" data-tab="tabHold">📊 我的持仓</button>
+  <button class="tab-btn" data-tab="tabFund">💰 资金账户</button>
 </div>
-{wallet_html}
+{SEARCH_HTML}
+<div class="tab-page active" id="tabRec">
+{short_term_html}
+</div>
+<div class="tab-page" id="tabCand">
+  <div class="stat">
+    <div><b>{len(out)}</b><span>今日候选</span></div>
+    <div><b>{len(pool)}</b><span>买得起的候选</span></div>
+    <div><b>{sum(1 for x in out if x['trade']['state']=='可买')}</b><span>"可买"数量</span></div>
+  </div>
+  {cards}
+</div>
+<div class="tab-page" id="tabHold">
 {HOLD_HTML}
-{cards}
+</div>
+<div class="tab-page" id="tabFund">
+{wallet_html}
+</div>
 <div class="foot">状态依据：现价 vs 20日均线、离5日均线远近；买入区间=现价与MA5之间。<br>
-资金账户：本地 python add_fund.py 转入资金后重新部署 · 添加到主屏幕即可像App一样用 · 每天收盘后自动更新</div>
+资金账户：本地 python add_fund.py 转入资金后重新部署 · 添加到主屏幕即可像App一样用 · 每天收盘后自动更新<br>
+<span id="selfCheck">自检中...</span></div>
 <script>
 {APP_JS}
+{APP_JS_UI}
 {APP_JS_EXTRA}
 {APP_JS_ADVICE}
 {APP_JS_HOLD}
