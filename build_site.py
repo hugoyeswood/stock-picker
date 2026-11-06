@@ -709,11 +709,14 @@ function renderShortTerm(j){
   return html;
 }
 function fetchStRec(){
-  // 云端定时任务只PUT仓库JSON（不触发构建），raw 即时反映最新目录；同源仅作兜底
-  return fetch('https://raw.githubusercontent.com/hugoyeswood/stock-picker/main/short_term_rec.json?v='+Date.now())
+  // 同源优先（随站点一起部署，国内直连、无跨域）；同源缺失时回退 GitHub raw 兜底
+  return fetch('short_term_rec.json?v='+Date.now())
     .then(function(r){ return r.ok?r.json():null; })
-    .catch(function(){
-      return fetch('short_term_rec.json?v='+Date.now()).then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; });
+    .catch(function(){ return null; })
+    .then(function(j){
+      if(j && j.stocks) return j;
+      return fetch('https://raw.githubusercontent.com/hugoyeswood/stock-picker/main/short_term_rec.json?v='+Date.now())
+        .then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; });
     });
 }
 function refreshShortTerm(){
@@ -730,6 +733,16 @@ function refreshShortTerm(){
 }
 setTimeout(refreshShortTerm, 2500);   // 页面加载后先拉一次
 setInterval(refreshShortTerm, 900000); // 每15分钟更新推荐目录
+// 关键：APP 切回前台/重新联网时立即重拉，避免后台定时器被系统挂起后一直显示旧目录
+function refreshAllOnResume(){
+  refreshShortTerm();
+  if(typeof refreshHoldings==='function') refreshHoldings();
+  if(typeof refreshRealtime==='function') refreshRealtime();
+  if(typeof refreshFundPanel==='function') refreshFundPanel();
+}
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) refreshAllOnResume(); });
+window.addEventListener('focus', function(){ refreshAllOnResume(); });
+window.addEventListener('online', function(){ refreshAllOnResume(); });
 // ===== 持仓着重关注：每小时抛售/加仓提示 =====
 // 信号矩阵（对每只持仓股，现价用每秒实时缓存 _lastPrice）：
 //   抛售SELL：现价≤止损线×1.02（逼近跌停峰值）| 现价≥止盈目标（涨值巅峰落袋）| 当日涨幅≥9.5%（接近涨停锁利）
@@ -1061,6 +1074,13 @@ if ('serviceWorker' in navigator) {{ navigator.serviceWorker.register('./service
 
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html_doc)
+
+# 把推荐目录也放进发布目录，供前端同源 fetch（避免只能依赖海外 raw）
+import os, shutil
+if os.path.exists("short_term_rec.json"):
+    os.makedirs("_site", exist_ok=True)
+    shutil.copy("short_term_rec.json", os.path.join("_site", "short_term_rec.json"))
+    print("同源发布：_site/short_term_rec.json")
 
 print("\n完成！生成：index.html（手机页）+ data.json（数据备份）")
 print(f"更新于 {now}，数据源 {src}，候选 {len(out)} 只，可用资金 ¥{BUDGET:.2f}")
