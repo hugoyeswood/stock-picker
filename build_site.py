@@ -345,7 +345,7 @@ try:
                     st_qty = f"{hands}手（{hands*100}股）" if hands > 0 else "资金不足1手"
             except Exception:
                 st_qty = "--"
-        st_cards += f'  <div class="st-reason">✅ 可买理由：{sr}</div>'
+        st_cards += f'  <div class="st-reason">✅ 可买理由：{sr.replace("✅ 可买理由：", "").replace("可买理由：", "").strip()}</div>'
         st_cards += f'  <div class="st-qty">📌 建议买入股数：<b style="color:#c62828;">{st_qty}</b></div>'
         st_cards += f'  <div class="st-line">📈 涨值巅峰线：<b style="color:#2e7d32;">{stake}元</b> · 🛡 跌停锋线：<b style="color:#c62828;">{sstop}元</b></div>'
         st_cards += f'  <div class="st-ref">买入区间 <b>{sbuy}</b> · 止损 <b>{sstop}</b> · 止盈 <b>{stake}</b></div>'
@@ -695,7 +695,7 @@ function renderShortTerm(j){
       spTxt+
       '<span class="st-price price" data-code="'+escHtml(s.code)+'" style="color:'+scol+';">'+priceTxt+'</span> '+
       '<span class="st-chg chg" data-code="'+escHtml(s.code)+'">'+chgTxt+'</span></div>'+
-      '<div class="st-reason">✅ 可买理由：'+escHtml(s.reason||'--')+'</div>'+
+      '<div class="st-reason">✅ 可买理由：'+escHtml(String(s.reason||'--').replace('✅ 可买理由：','').replace('可买理由：','').trim())+'</div>'+
       '<div class="st-qty">📌 建议买入股数：<b style="color:#c62828;">'+escHtml(s.qty||'--')+'</b></div>'+
       '<div class="st-line">📈 涨值巅峰线：<b style="color:#2e7d32;">'+escHtml(s.take_profit||'--')+'元</b> · 🛡 跌停锋线：<b style="color:#c62828;">'+escHtml(s.stop_loss||'--')+'元</b></div>'+
       '<div class="st-ref">买入区间 <b>'+escHtml(s.buy_range||'--')+'</b> · 止损 <b>'+escHtml(s.stop_loss||'--')+'</b> · 止盈 <b>'+escHtml(s.take_profit||'--')+'</b></div>'+
