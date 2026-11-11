@@ -359,7 +359,7 @@ try:
     short_term_html = (f'<div id="stRecContainer">'
         f'<div class="card short-term">'
         f'  <div class="card-top"><div class="name">📈 今日短线推荐</div>'
-        f'    <div class="st-date">{st_date}{ts_part} · 每15分钟刷新</div></div>'
+        f'    <div class="st-date">{st_date}{ts_part} · 行情实时 <span id="stLive">--:--:--</span></div></div>'
         f'  <div class="st-summary"><b>市场综述：</b>{st_summary}</div>'
         f'  {st_cards}'
         f'  <div class="st-note">⚠️ {st_note}</div>'
@@ -670,7 +670,7 @@ function hasHolding(code){
 }
 function renderShortTerm(j){
   var dateTxt=escHtml(j.date||''), tsTxt=escHtml(j.ts||'');
-  var html='<div class="card short-term"><div class="card-top"><div class="name">📈 今日短线推荐</div><div class="st-date">'+dateTxt+' 目录更新 '+(tsTxt?tsTxt:'最新')+' · 每15分钟刷新</div></div>';
+  var html='<div class="card short-term"><div class="card-top"><div class="name">📈 今日短线推荐</div><div class="st-date">'+dateTxt+' 目录更新 '+(tsTxt?tsTxt:'最新')+' · 行情实时 <span id="stLive">--:--:--</span></div></div>';
   html+='<div class="st-summary"><b>市场综述：</b>'+escHtml(j.market_summary||'')+'</div>';
   var budget=getBudget();
   // 短期优选置顶：按“预判1-2天盈利空间”降序（涨值巅峰线相对现价空间），空间相同按当日涨幅
@@ -732,7 +732,8 @@ function refreshShortTerm(){
   });
 }
 setTimeout(refreshShortTerm, 2500);   // 页面加载后先拉一次
-setInterval(refreshShortTerm, 900000); // 每15分钟更新推荐目录
+setInterval(function(){ var e=document.getElementById('stLive'); if(!e) return; var d=new Date(); e.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2); }, 1000);
+setInterval(refreshShortTerm, 120000); // 每2分钟同步推荐目录
 // 关键：APP 切回前台/重新联网时立即重拉，避免后台定时器被系统挂起后一直显示旧目录
 function refreshAllOnResume(){
   refreshShortTerm();
