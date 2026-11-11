@@ -1,5 +1,5 @@
 /* 离线缓存：优先取最新（每天数据会变），断网时用上次缓存的 */
-const CACHE = 'stock-picker-v3';
+const CACHE = 'stock-picker-v4';
 const ASSETS = [
   './', './index.html', './data.json', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'
@@ -16,6 +16,8 @@ self.addEventListener('activate', (e) => {
     caches.keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll())
+      .then((clients) => { clients.forEach((c) => c.postMessage({type:'NEW_VERSION'})); })
   );
 });
 
