@@ -733,7 +733,8 @@ function refreshShortTerm(){
 }
 setTimeout(refreshShortTerm, 2500);   // 页面加载后先拉一次
 setInterval(function(){ var e=document.getElementById('stLive'); if(!e) return; var d=new Date(); e.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2); }, 1000);
-setInterval(refreshShortTerm, 120000); // 每2分钟同步推荐目录
+setInterval(refreshShortTerm, 600000); // 每10分钟同步推荐目录
+setInterval(function(){ refreshHoldings&&refreshHoldings(); refreshFundPanel&&refreshFundPanel(); }, 60000); // 持仓面板每分钟刷新
 // 关键：APP 切回前台/重新联网时立即重拉，避免后台定时器被系统挂起后一直显示旧目录
 function refreshAllOnResume(){
   refreshShortTerm();
