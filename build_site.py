@@ -62,9 +62,16 @@ def normalize(df, source):
     return df
 
 def fetch_all():
-    for source, fn in [("腾讯", ak.stock_zh_a_spot_tx),
-                       ("东财", ak.stock_zh_a_spot_em),
-                       ("新浪", ak.stock_zh_a_spot)]:
+    # PATCH 2026-11-23: akshare>=1.20.46 将 stock_zh_a_spot 更名为 stock_zh_a_spot_sina
+    srcs = [("腾讯", getattr(ak, "stock_zh_a_spot_tx", None)),
+            ("东财", getattr(ak, "stock_zh_a_spot_em", None))]
+    for nm in ("stock_zh_a_spot_sina", "stock_zh_a_spot"):
+        f = getattr(ak, nm, None)
+        if f:
+            srcs.append(("新浪", f))
+            break
+    srcs = [(s, f) for s, f in srcs if f is not None]
+    for source, fn in srcs:
         try:
             df = fn()
             print(f"[数据源] 用 {source}")
