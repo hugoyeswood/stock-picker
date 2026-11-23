@@ -224,12 +224,24 @@ for s, r, why in top:
 # ============ PATCH 2026-11-23: 主站镜像 V3.3 名单（不再自己选股） ============
 def _mirror_v3(cur):
     """若 short_term_rec.json 为当日名单，则用它替换主站自选，保证两站同源。"""
+    rec = None
+    # PATCH 2026-11-23b: 优先从 V3 仓库线上取当日名单，避免主站仓库那份手工副本滞后
     try:
-        with open("short_term_rec.json", encoding="utf-8") as f:
-            rec = json.load(f)
+        import urllib.request, time as _t
+        _u = "https://raw.githubusercontent.com/hugoyeswood/stock-picker-v3/main/short_term_rec.json?nc=%d" % int(_t.time())
+        with urllib.request.urlopen(_u, timeout=12) as _r:
+            rec = json.loads(_r.read().decode("utf-8"))
+        print("[镜像] 名单来源：V3 仓库线上")
     except Exception as e:
-        print("[镜像] 读推荐失败(%s)，回退主站自选" % str(e)[:40])
-        return cur, None
+        print("[镜像] 远程取名单失败(%s)，改用仓库本地副本" % str(e)[:50])
+    if rec is None:
+        try:
+            with open("short_term_rec.json", encoding="utf-8") as f:
+                rec = json.load(f)
+            print("[镜像] 名单来源：本地仓库副本")
+        except Exception as e:
+            print("[镜像] 读推荐失败(%s)，回退主站自选" % str(e)[:40])
+            return cur, None
     if str(rec.get("date", ""))[:10] != datetime.now().strftime("%Y-%m-%d"):
         print("[镜像] V3 名单非当日(%s)，回退主站自选" % rec.get("date"))
         return cur, None
