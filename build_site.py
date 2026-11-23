@@ -1086,10 +1086,16 @@ with open("index.html", "w", encoding="utf-8") as f:
 
 # 把推荐目录也放进发布目录，供前端同源 fetch（避免只能依赖海外 raw）
 import os, shutil
-if os.path.exists("short_term_rec.json"):
+for _f in ("candidates.json", "short_term_rec.json"):
+    if os.path.exists(_f):
+        os.makedirs("_site", exist_ok=True)
+        shutil.copy(_f, os.path.join("_site", _f))
+        print("同源发布：_site/" + _f)
+if False and os.path.exists("short_term_rec.json"):
     os.makedirs("_site", exist_ok=True)
     shutil.copy("short_term_rec.json", os.path.join("_site", "short_term_rec.json"))
     print("同源发布：_site/short_term_rec.json")
 
+print("\n# PATCH_SITE_COPY")
 print("\n完成！生成：index.html（手机页）+ data.json（数据备份）")
 print(f"更新于 {now}，数据源 {src}，候选 {len(out)} 只，可用资金 ¥{BUDGET:.2f}")
