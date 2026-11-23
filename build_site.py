@@ -221,12 +221,79 @@ for s, r, why in top:
         "trade": trade,
     })
 
+# ============ PATCH 2026-11-23: 主站镜像 V3.3 名单（不再自己选股） ============
+def _mirror_v3(cur):
+    """若 short_term_rec.json 为当日名单，则用它替换主站自选，保证两站同源。"""
+    try:
+        with open("short_term_rec.json", encoding="utf-8") as f:
+            rec = json.load(f)
+    except Exception as e:
+        print("[镜像] 读推荐失败(%s)，回退主站自选" % str(e)[:40])
+        return cur, None
+    if str(rec.get("date", ""))[:10] != datetime.now().strftime("%Y-%m-%d"):
+        print("[镜像] V3 名单非当日(%s)，回退主站自选" % rec.get("date"))
+        return cur, None
+    st = rec.get("stocks") or []
+    if not st:
+        return cur, None
+    mo = []
+    for s in st:
+        code = str(s.get("code") or "")
+        px = float(s.get("price") or s.get("entry") or 0)
+        if not code or px <= 0:
+            continue
+        # 股数口径对齐 V3：按凯利单只上限 2054 元整手向下取，不用主站钱包 10000 折算
+        _cap = float(s.get("kelly_cap") or 2054.0)
+        hands = int(_cap // (px * 100))
+        trade = calc_trade(code, px)
+        try:
+            lo, hi = [float(x) for x in str(s.get("buy_range", "")).replace("～", "~").split("~")]
+        except Exception:
+            lo, hi = round(px * 0.97, 2), round(px, 2)
+        if px > hi * 1.005:
+            tstate = "等回踩"
+        elif px < lo:
+            tstate = "跌破买区"
+        else:
+            tstate = "可买"
+        trade.update({
+            "state": tstate,
+            "stop_loss": float(s.get("stop_loss") or round(px * 0.95, 2)),
+            "take_profit": float(s.get("take_profit") or round(px * 1.10, 2)),
+            "buy_low": lo,
+            "buy_high": hi,
+        })
+        mo.append({
+            "code": code, "name": s.get("name"),
+            "price": round(px, 2), "chg": s.get("chg"),
+            "chg5": s.get("chg5"), "chg10": s.get("chg10"), "chg20": s.get("chg20"),
+            "lb": s.get("lb"), "hsl": s.get("hsl"), "pe": None,
+            "score": s.get("score") or 0,
+            "why": "[V3.3镜像] " + str(s.get("reason") or "")[:150],
+            "hands": hands, "cost": int(hands * px * 100),
+            "trade": trade, "_v3": True,
+        })
+    print("[镜像] 用 V3.3 名单 %d 只替换主站自选 %d 只" % (len(mo), len(cur)))
+    return mo, rec
+
+out, _v3rec = _mirror_v3(out)
+if _v3rec:
+    src = "V3.3大师逻辑·当日名单镜像"
+    V3_TS = _v3rec.get("ts") or ""
+else:
+    V3_TS = ""
+
 now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
 # 保存数据备份 data.json
+_data_obj = {"updated": now, "date": datetime.now().strftime("%Y-%m-%d"),
+             "source": src, "budget": BUDGET, "count": len(out),
+             "v3_ts": V3_TS, "candidates": out}
 with open("data.json", "w", encoding="utf-8") as f:
-    json.dump({"updated": now, "source": src, "budget": BUDGET,
-               "count": len(out), "candidates": out}, f, ensure_ascii=False, indent=2)
+    json.dump(_data_obj, f, ensure_ascii=False, indent=2)
+# PATCH 2026-11-23: 主站 candidates.json 与 data.json 同源，避免 404 / 两套名单
+with open("candidates.json", "w", encoding="utf-8") as f:
+    json.dump(_data_obj, f, ensure_ascii=False, indent=2)
 
 # ============ 8. 生成手机友好页面 index.html ============
 def esc(x):
